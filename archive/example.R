@@ -1,5 +1,5 @@
-source("./R/data_check_v02.R")
-source("./R/data_correct_v02.R")
+source("./R/data_check.R")
+source("./R/data_correct.R")
 source("./R/plot_protein_by_sample.R")
 source("./R/plot_protein.R")
 df <- read.csv("./tests/raw_data_aggr.csv")

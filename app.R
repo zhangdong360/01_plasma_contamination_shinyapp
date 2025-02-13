@@ -34,7 +34,6 @@ ui <- fluidPage(
       actionButton("run_check", "运行数据检查"),
       actionButton("run_correct", "运行数据校正"),
       actionButton("run_de", "运行差异表达分析"),
-      downloadButton("download_data", "下载校正数据"),
       downloadButton("download_de", "下载差异表达结果")
     ),
     mainPanel(
@@ -51,19 +50,13 @@ ui <- fluidPage(
                  h3("污染marker表达情况"),
                  tabsetPanel(
                    tabPanel("红系污染",
-                            h4("matrix"),
                             DTOutput("data_marker_erythrocyte"),
-                            h4("marker plot"),
                             plotOutput("contamination_erythrocyte_plot")),
                    tabPanel("凝血污染", 
-                            h4(" matrix"),
                             DTOutput("data_marker_coagulation"),
-                            h4("marker plot"),
                             plotOutput("contamination_coagulation_plot")),
                    tabPanel("血小板污染", 
-                            h4("matrix"),
                             DTOutput("data_marker_platelet"),
-                            h4("marker plot"),
                             plotOutput("contamination_platelet_plot"))
                  ),
                  h3("样本污染情况"),
@@ -77,15 +70,29 @@ ui <- fluidPage(
                  )
         ),
         tabPanel("校正结果", 
-                 h3("校正后污染水平可视化"),
-                 plotOutput("corrected_plot")),
+                 h3("矫正后矩阵"),
+                 downloadButton("download_data", "下载校正数据"),
+                 DTOutput("data_correct_table")
+        ),
         tabPanel("差异表达分析", 
-                 h3("差异表达结果"),
-                 DTOutput("de_table"))  # 使用 DTOutput 替换 tableOutput
+                 tabsetPanel(
+                             tabPanel("原始数据table",
+                                      DTOutput("result_de_table")),
+                             tabPanel("矫正table",
+                                      DTOutput("result_de_post_table")
+                                      )),
+                 tabsetPanel(
+                             tabPanel("原始数据",
+                                      plotOutput("volc_de_post")),
+                             tabPanel("矫正table",
+                                      plotOutput("volc_de"))
+                             )
+                 )
       )
     )
   )
 )
+
 
 # 定义 Server 逻辑 ----
 server <- function(input, output, session) {
@@ -119,6 +126,10 @@ server <- function(input, output, session) {
   # 更新分组选择 ----
   observe({
     req(data_group())
+    if (!"group" %in% colnames(data_group())) {
+      showNotification("分组文件缺少'group'列!", type = "error")
+      return()
+    }
     updateSelectInput(session, "group1", choices = unique(data_group()$group))
     updateSelectInput(session, "group2", choices = unique(data_group()$group))
   })
@@ -207,11 +218,18 @@ server <- function(input, output, session) {
   })
   
   # 数据校正 ----
+  ## 开始数据矫正 ----
   result_correct <- eventReactive(input$run_correct, {
-    data_correct(result_check(), type = input$type)
+    req(result_check())
+    data_correct(data = result_check(), type = input$type)
+  })
+  ## 显示矫正后矩阵 ----
+  output$data_correct_table <- renderDT({
+    req(result_correct())
+    datatable(result_correct()$correct_data, options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-  # 显示校正后污染水平可视化 ----
+  # corrected_plot 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
     req(result_correct())
     if (is.null(result_correct()$contamination_level)) {
@@ -222,15 +240,53 @@ server <- function(input, output, session) {
   
   # 差异表达分析 ----
   result_de <- eventReactive(input$run_de, {
-    limma_proteomics_analysis(result_correct(), type = "post", group_1 = input$group1, group_2 = input$group2)
+    req(result_correct())
+    limma_proteomics_analysis(expr_matrix = log2(result_correct()$correct_data),
+                              group_matrix = result_correct()$group,
+                              compare = c(input$group1,input$group2),
+                              p_type = "raw")
+  })
+  result_de_post <- eventReactive(input$run_de, {
+    req(result_correct())
+    limma_proteomics_analysis(expr_matrix = log2(result_correct()$rawdata),
+                              group_matrix = result_correct()$group,
+                              compare = c(input$group1,input$group2),
+                              p_type = "raw")
   })
   
   # 显示差异表达结果 ----
-  output$de_table <- renderDT({
+  output$result_de_table <- renderDT({
     req(result_de())
     datatable(result_de(), options = list(pageLength = 10))  # 每页显示 10 行
   })
+  output$result_de_post_table <- renderDT({
+    req(result_de_post())
+    datatable(result_de_post(), options = list(pageLength = 10))  # 每页显示 10 行
+  })
   
+  # 绘制火山图 ----
+  output$volc_de <- renderPlot({
+    req(result_de())
+    plot_volc <- create_volcano_plot(result_de(), 
+                                     p_type = "adjusted", 
+                                     p_cutoff = 0.05, 
+                                     logFC_cutoff = 1,
+                                     gene_col = "Protein",
+                                     group_names = c(input$group1,input$group2),
+                                     colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"))
+    print(plot_volc)
+  })
+  output$volc_de_post <- renderPlot({
+    req(result_de_post())
+    plot_volc <- create_volcano_plot(result_de_post(), 
+                                     p_type = "adjusted", 
+                                     p_cutoff = 0.05, 
+                                     logFC_cutoff = 1,
+                                     gene_col = "Protein",
+                                     group_names = c(input$group1,input$group2),
+                                     colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"))
+    print(plot_volc)
+  })
   # 下载校正数据 ----
   output$download_data <- downloadHandler(
     filename = function() {
@@ -251,6 +307,8 @@ server <- function(input, output, session) {
     }
   )
 }
+
+
 
 # 运行 Shiny 应用 ----
 shinyApp(ui = ui, server = server)
