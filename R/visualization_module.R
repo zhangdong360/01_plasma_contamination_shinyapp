@@ -4,7 +4,10 @@ create_volcano_plot <- function(limma_result,
                                 logFC_cutoff = 1,
                                 gene_col = "Protein",
                                 group_names = c("Group1", "Group2"),
-                                colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80")) {
+                                colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"),
+                                base_size = 14,        # 新增基础字号参数
+                                label_size = 4.5,      # 新增标签字号参数
+                                auto_font = TRUE) {    # 新增自动调节开关
   # 检查必要包
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' required but not installed.")
@@ -36,17 +39,34 @@ create_volcano_plot <- function(limma_result,
   plot_data$sig[plot_data[[p_column]] < p_cutoff & plot_data$logFC <= -logFC_cutoff] <- "Down"
   plot_data$sig <- factor(plot_data$sig, levels = c("Up", "Down", "Not"))
   
+  # 智能字号调节逻辑
+  if(auto_font) {
+    n_points <- nrow(limma_result)
+    base_size <- dplyr::case_when(
+      n_points > 10000 ~ 12,
+      n_points > 5000 ~ 14,
+      TRUE ~ 16
+    )
+    label_size <- dplyr::case_when(
+      n_points > 10000 ~ 3.5,
+      n_points > 5000 ~ 4,
+      TRUE ~ 4.5
+    )
+  }
   # 创建基础火山图
   volc <- ggplot2::ggplot(data = plot_data, 
                           aes(x = logFC, 
                               y = -log10(.data[[p_column]]), 
                               color = sig)) +
     ggplot2::geom_point(alpha = 0.9) +
-    ggplot2::theme_classic() +
+    ggplot2::theme_classic(base_size = base_size) +  # 应用基础字号
     ggplot2::theme(
       panel.grid = element_blank(),
-      plot.title = element_text(hjust = 0.5, face = "bold"),
-      legend.position = "right"
+      plot.title = element_text(hjust = 0.5, face = "bold", size = base_size * 1.2),
+      axis.title = element_text(size = base_size * 1.1),
+      axis.text = element_text(size = base_size * 0.9),
+      legend.text = element_text(size = base_size * 0.9),
+      legend.title = element_text(size = base_size)
     ) +
     ggplot2::scale_color_manual(
       values = colors,
@@ -88,12 +108,13 @@ create_volcano_plot <- function(limma_result,
     dplyr::arrange(desc(abs(logFC))) %>%
     head(10)
   
-  if (nrow(top_genes) > 0) {
+  # 添加标签（动态调节标签字号）
+  if(nrow(top_genes) > 0) {
     volc <- volc +
       ggrepel::geom_text_repel(
         data = top_genes,
         aes(label = gene),
-        size = 3,
+        size = label_size,          # 应用标签字号
         box.padding = 0.5,
         max.overlaps = Inf,
         segment.color = "grey50"

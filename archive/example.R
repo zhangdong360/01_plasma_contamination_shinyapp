@@ -19,6 +19,6 @@ result <- limma_proteomics_analysis(expr_matrix = log2(df),
                                     compare = c("AD","Ctrl"),
                                     p_type = "raw")
 plot_1 <- create_volcano_plot(limma_result = result,
-                              p_type = "raw",gene_col = "plot_1",
+                              p_type = "raw",gene_col = "Protein",
                               group_names = c("AD","Ctrl"),logFC_cutoff = 0)
 plot_1

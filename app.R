@@ -33,8 +33,7 @@ ui <- fluidPage(
       ),
       actionButton("run_check", "运行数据检查"),
       actionButton("run_correct", "运行数据校正"),
-      actionButton("run_de", "运行差异表达分析"),
-      downloadButton("download_de", "下载差异表达结果")
+      actionButton("run_de", "运行差异表达分析")
     ),
     mainPanel(
       tabsetPanel(
@@ -77,9 +76,10 @@ ui <- fluidPage(
         tabPanel("差异表达分析", 
                  tabsetPanel(
                              tabPanel("原始数据table",
-                                      DTOutput("result_de_table")),
+                                      DTOutput("result_de_post_table")),
                              tabPanel("矫正table",
-                                      DTOutput("result_de_post_table")
+                                      downloadButton("download_de", "下载差异表达结果"),
+                                      DTOutput("result_de_table")
                                       )),
                  tabsetPanel(
                              tabPanel("原始数据",
