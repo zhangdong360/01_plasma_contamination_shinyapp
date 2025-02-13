@@ -11,10 +11,26 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       fileInput("data_file", "上传数据文件 (CSV)", accept = ".csv"),
-      fileInput("group_file", "上传分组信息文件 (CSV)", accept = ".csv"),
-      selectInput("type", "校正类型", choices = c("all", "erythrocyte", "platelet", "coagulation")),
-      selectInput("group1", "分组1", choices = NULL),
-      selectInput("group2", "分组2", choices = NULL),
+      fileInput(
+        "group_file",
+        "上传分组信息文件 (CSV)",
+        accept = ".csv"
+      ),
+      selectInput(
+        "type",
+        "校正类型",
+        choices = c("all", "erythrocyte", "platelet", "coagulation")
+      ),
+      selectInput(
+        "group1",
+        "分组1",
+        choices = NULL
+      ),
+      selectInput(
+        "group2",
+        "分组2",
+        choices = NULL
+      ),
       actionButton("run_check", "运行数据检查"),
       actionButton("run_correct", "运行数据校正"),
       actionButton("run_de", "运行差异表达分析"),
@@ -71,9 +87,9 @@ ui <- fluidPage(
   )
 )
 
-# 定义 Server 逻辑
+# 定义 Server 逻辑 ----
 server <- function(input, output, session) {
-  # 读取数据
+  # 读取数据 ----
   data <- reactive({
     req(input$data_file)
     df <- read.csv(input$data_file$datapath)
@@ -89,7 +105,7 @@ server <- function(input, output, session) {
     df
   })
   
-  # 展示原始数据（使用 DT 包）
+  # 展示原始数据（使用 DT 包） ----
   output$data_table <- renderDT({
     req(data())
     datatable(data(), options = list(pageLength = 10))  # 每页显示 10 行
@@ -100,19 +116,19 @@ server <- function(input, output, session) {
     datatable(data_group(), options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-  # 更新分组选择
+  # 更新分组选择 ----
   observe({
     req(data_group())
     updateSelectInput(session, "group1", choices = unique(data_group()$group))
     updateSelectInput(session, "group2", choices = unique(data_group()$group))
   })
   
-  # 数据检查
+  # 数据检查 ----
   result_check <- eventReactive(input$run_check, {
     data_check(data(), data_group())
   })
   
-  # 显示缺失基因
+  # 显示缺失基因 ----
   output$missing_genes <- renderPrint({
     req(result_check())
     cat("红系marker缺失基因:\n")
@@ -123,13 +139,13 @@ server <- function(input, output, session) {
     print(result_check()$missing_genes$missing_platelet_genes)
   })
   
-  # 显示污染水平可视化
+  # 显示污染水平可视化 ----
   output$contamination_erythrocyte_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_contamination)) {
       return(NULL)  # 如果 plot_contamination 为 NULL，不绘制图表
     }
-    # 绘制污染水平可视化
+    # 绘制污染水平可视化 ----
     plot(result_check()$plot_contamination$erythrocyte)
   })
   output$contamination_platelet_plot <- renderPlot({
@@ -137,7 +153,7 @@ server <- function(input, output, session) {
     if (is.null(result_check()$plot_contamination)) {
       return(NULL)  # 如果 plot_contamination 为 NULL，不绘制图表
     }
-    # 绘制污染水平可视化
+    # 绘制污染水平可视化 ----
     plot(result_check()$plot_contamination$platelet)
   })
   output$contamination_coagulation_plot <- renderPlot({
@@ -145,11 +161,11 @@ server <- function(input, output, session) {
     if (is.null(result_check()$plot_contamination)) {
       return(NULL)  # 如果 plot_contamination 为 NULL，不绘制图表
     }
-    # 绘制污染水平可视化
+    # 绘制污染水平可视化 ----
     plot(result_check()$plot_contamination$coagulation)
   })
   
-  # 显示红细胞标记物可视化
+  # 显示红细胞标记物可视化 ----
   output$erythrocyte_marker_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_marker$erythrocyte)) {
@@ -158,7 +174,7 @@ server <- function(input, output, session) {
     plot(result_check()$plot_marker$erythrocyte)
   })
   
-  # 显示血小板标记物可视化
+  # 显示血小板标记物可视化 ----
   output$platelet_marker_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_marker$platelet)) {
@@ -167,7 +183,7 @@ server <- function(input, output, session) {
     plot(result_check()$plot_marker$platelet)
   })
   
-  # 显示凝血标记物可视化
+  # 显示凝血标记物可视化 ----
   output$coagulation_marker_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_marker$coagulation)) {
@@ -176,7 +192,7 @@ server <- function(input, output, session) {
     print(result_check()$plot_marker$coagulation)
   })
   
-  # 显示污染矩阵
+  # 显示污染矩阵 ----
   output$data_marker_erythrocyte <- renderDT({
     req(result_check())
     datatable(result_check()$data$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
@@ -190,12 +206,12 @@ server <- function(input, output, session) {
     datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-  # 数据校正
+  # 数据校正 ----
   result_correct <- eventReactive(input$run_correct, {
     data_correct(result_check(), type = input$type)
   })
   
-  # 显示校正后污染水平可视化
+  # 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
     req(result_correct())
     if (is.null(result_correct()$contamination_level)) {
@@ -204,18 +220,18 @@ server <- function(input, output, session) {
     plot_contamination(result_correct()$contamination_level, "校正后污染水平可视化", "corrected_plot")
   })
   
-  # 差异表达分析
+  # 差异表达分析 ----
   result_de <- eventReactive(input$run_de, {
-    DE_analysis(result_correct(), type = "post", group_1 = input$group1, group_2 = input$group2)
+    limma_proteomics_analysis(result_correct(), type = "post", group_1 = input$group1, group_2 = input$group2)
   })
   
-  # 显示差异表达结果
+  # 显示差异表达结果 ----
   output$de_table <- renderDT({
     req(result_de())
     datatable(result_de(), options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-  # 下载校正数据
+  # 下载校正数据 ----
   output$download_data <- downloadHandler(
     filename = function() {
       "corrected_data.csv"
@@ -225,7 +241,7 @@ server <- function(input, output, session) {
     }
   )
   
-  # 下载差异表达结果
+  # 下载差异表达结果 ----
   output$download_de <- downloadHandler(
     filename = function() {
       "de_results.csv"
@@ -236,5 +252,5 @@ server <- function(input, output, session) {
   )
 }
 
-# 运行 Shiny 应用
+# 运行 Shiny 应用 ----
 shinyApp(ui = ui, server = server)
