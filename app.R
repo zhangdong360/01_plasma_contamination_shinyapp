@@ -60,6 +60,8 @@ ui <- fluidPage(
                  ),
                  h3("样本污染情况"),
                  tabsetPanel(
+                   tabPanel("CV",
+                            plotOutput("cv_plot")),
                    tabPanel("红系污染",
                             plotOutput("erythrocyte_marker_plot")),
                    tabPanel("凝血污染", 
@@ -151,6 +153,36 @@ server <- function(input, output, session) {
   })
   
   # 显示污染水平可视化 ----
+  output$cv_plot <- renderPlot({
+    req(data())
+    req(result_check())
+    result_cv_coa <- get_cv(raw_data = data(),protein = result_check()$marker_list$coagulation)
+    result_cv_ery <- get_cv(raw_data = data(),protein = result_check()$marker_list$erythrocyte)
+    result_cv_pla <- get_cv(raw_data = data(),protein = result_check()$marker_list$platelet)
+    result_cv_other <- get_cv(raw_data = data()[!rownames(data())%in%
+                                              c(result_check()$marker_list$coagulation,
+                                                result_check()$marker_list$erythrocyte,
+                                                result_check()$marker_list$platelet),])
+    result_cv_coa$type <- "coagulation"
+    result_cv_ery$type <- "erythrocyte"
+    result_cv_pla$type <- "platelet"
+    result_cv_other$type <- "other protein"
+    result_cv <- rbind(result_cv_coa,result_cv_ery,result_cv_pla,result_cv_other)
+    result_cv$type <- factor(result_cv$type,
+                             levels = c("coagulation",
+                                        "erythrocyte",
+                                        "platelet",
+                                        "other protein"))
+    ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
+      geom_violin() +
+      geom_boxplot(fill = "white",width = 0.2) +
+      scale_fill_manual(values = c("coagulation" = "#E64B35FF",
+                                   "erythrocyte" = "#F39B7FFF",
+                                   "platelet" = "#7E6148FF",
+                                   "other protein" = "#3C5488FF")) +
+      theme_classic() +
+      theme(axis.text.x = element_blank())
+  })
   output$contamination_erythrocyte_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_contamination)) {

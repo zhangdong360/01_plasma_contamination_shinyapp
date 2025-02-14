@@ -2,7 +2,9 @@ source("./R/data_check.R")
 source("./R/data_correct.R")
 source("./R/plot_protein_by_sample.R")
 source("./R/plot_protein.R")
+library(ggsci)
 df <- read.csv("./tests/raw_data_aggr.csv")
+
 rownames(df) <- df[, 1]  # 将第一列设置为行名
 df <- df[, -1, drop = FALSE]  # 删除第一列
 df
@@ -22,3 +24,30 @@ plot_1 <- create_volcano_plot(limma_result = result,
                               p_type = "raw",gene_col = "Protein",
                               group_names = c("AD","Ctrl"),logFC_cutoff = 0)
 plot_1
+
+result_cv_coa <- get_cv(raw_data = df,protein = list_coagulation$GN)
+result_cv_ery <- get_cv(raw_data = df,protein = list_erythrocyte$GN)
+result_cv_pla <- get_cv(raw_data = df,protein = list_platelet$GN)
+result_cv_other <- get_cv(raw_data = df[!rownames(df)%in%
+                                          c(list_coagulation$GN,
+                                            list_erythrocyte$GN,
+                                            list_platelet$GN),])
+result_cv_coa$type <- "coagulation"
+result_cv_ery$type <- "erythrocyte"
+result_cv_pla$type <- "platelet"
+result_cv_other$type <- "other protein"
+result_cv <- rbind(result_cv_coa,result_cv_ery,result_cv_pla,result_cv_other)
+result_cv$type <- factor(result_cv$type,
+                         levels = c("coagulation",
+                                    "erythrocyte",
+                                    "platelet",
+                                    "other protein"))
+ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
+  geom_violin() +
+  geom_boxplot(fill = "white",width = 0.2) +
+  scale_fill_manual(values = c("coagulation" = "#E64B35FF",
+                               "erythrocyte" = "#F39B7FFF",
+                               "platelet" = "#7E6148FF",
+                               "other protein" = "#3C5488FF")) +
+  theme_classic() +
+  theme(axis.text.x = element_blank())
