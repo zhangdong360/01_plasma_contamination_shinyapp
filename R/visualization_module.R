@@ -120,6 +120,5 @@ create_volcano_plot <- function(limma_result,
         segment.color = "grey50"
       )
   }
-  
   return(volc)
 }
