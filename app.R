@@ -10,11 +10,14 @@ ui <- fluidPage(
   titlePanel("血浆蛋白污染校正与差异表达分析"),
   sidebarLayout(
     sidebarPanel(
-      fileInput("data_file", "上传数据文件 (CSV)", accept = ".csv"),
-      fileInput(
-        "group_file",
-        "上传分组信息文件 (CSV)",
-        accept = ".csv"
+      radioButtons("data_source", "选择数据来源",
+                   choices = list("Load experimental data" = "experimental", 
+                                  "Load example data" = "example"),
+                   selected = "experimental"),
+      conditionalPanel(
+        condition = "input.data_source == 'experimental'",
+        fileInput("data_file", "上传数据文件 (CSV)", accept = ".csv"),
+        fileInput("group_file", "上传分组信息文件 (CSV)", accept = ".csv")
       ),
       selectInput(
         "type",
@@ -37,11 +40,18 @@ ui <- fluidPage(
     ),
     mainPanel(
       tabsetPanel(
-        tabPanel("原始数据", 
-                 h3("数据文件"),
-                 DTOutput("data_table"), 
-                 h3("分组信息文件"),
-                 DTOutput("group_table")),  
+tabPanel("原始数据", 
+                 conditionalPanel(
+                   condition = "output.data_loaded == false",
+                   h4("You did not upload your data. Please upload the expression data, or load the example data to check first.")
+                 ),
+                 conditionalPanel(
+                   condition = "output.data_loaded == true",
+                   h3("数据文件"),
+                   DTOutput("data_table"), 
+                   h3("分组信息文件"),
+                   DTOutput("group_table")
+                 )),  
         tabPanel("数据检查结果", 
                  h3("缺失基因"),
                  verbatimTextOutput("missing_genes"),
@@ -128,31 +138,55 @@ ui <- fluidPage(
 
 # 定义 Server 逻辑 ----
 server <- function(input, output, session) {
+  ## 加载示例数据 ----
+  example_data <- reactive({
+    df <- read.csv("./tests/raw_data_aggr.csv")  # 示例数据路径
+    rownames(df) <- df[, 1]
+    df[, -1, drop = FALSE]
+  })
+  
+  example_group <- reactive({
+    df <- read.csv("./tests/group.csv")  # 示例分组路径
+    rownames(df) <- df[, 1]
+    df
+  })
   ## 读取数据 ----
   data <- reactive({
-    req(input$data_file)
-    df <- read.csv(input$data_file$datapath)
-    rownames(df) <- df[, 1]  # 将第一列设置为行名
-    df <- df[, -1, drop = FALSE]  # 删除第一列
-    df
+    if (input$data_source == "example") {
+      example_data()
+    } else {
+      req(input$data_file)
+      df <- read.csv(input$data_file$datapath)
+      rownames(df) <- df[, 1]
+      df[, -1, drop = FALSE]
+    }
   })
   
   data_group <- reactive({
-    req(input$group_file)
-    df <- read.csv(input$group_file$datapath)
-    rownames(df) <- df[, 1]  # 将第一列设置为行名
-    df
+    if (input$data_source == "example") {
+      example_group()
+    } else {
+      req(input$group_file)
+      df <- read.csv(input$group_file$datapath)
+      rownames(df) <- df[, 1]
+      df
+    }
   })
+  # 数据加载状态判断
+  output$data_loaded <- reactive({
+    !is.null(data()) && !is.null(data_group())
+  })
+  outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
   
-  ## 展示原始数据（使用 DT 包） ----
+  ## 展示原始数据 ----
   output$data_table <- renderDT({
     req(data())
-    datatable(data(), options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(data(), options = list(pageLength = 10))
   })
   
   output$group_table <- renderDT({
     req(data_group())
-    datatable(data_group(), options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(data_group(), options = list(pageLength = 10))
   })
   
   ## 更新分组选择 ----
@@ -426,9 +460,9 @@ server <- function(input, output, session) {
   output$volc_de_pre <- renderPlot({
     req(result_de_pre())
     plot_volc <- create_volcano_plot(result_de_pre(), 
-                                     p_type = "adjusted", 
+                                     p_type = "raw", 
                                      p_cutoff = 0.05, 
-                                     logFC_cutoff = 1,
+                                     logFC_cutoff = 0,
                                      gene_col = "Protein",
                                      group_names = c(input$group1,input$group2),
                                      colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"))
@@ -437,9 +471,9 @@ server <- function(input, output, session) {
   output$volc_de_post <- renderPlot({
     req(result_de_post())
     plot_volc <- create_volcano_plot(result_de_post(), 
-                                     p_type = "adjusted", 
+                                     p_type = "raw", 
                                      p_cutoff = 0.05, 
-                                     logFC_cutoff = 1,
+                                     logFC_cutoff = 0,
                                      gene_col = "Protein",
                                      group_names = c(input$group1,input$group2),
                                      colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"))
