@@ -2,6 +2,7 @@ source("./R/data_check.R")
 source("./R/data_correct.R")
 source("./R/plot_protein_by_sample.R")
 source("./R/plot_protein.R")
+source("./R/modules/get_cv.R")
 library(ggsci)
 df <- read.csv("./tests/raw_data_aggr.csv")
 
@@ -13,8 +14,15 @@ rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 result_check$data
 result_correct <- data_correct(data = result_check,type = "all")
-
-plot_protein_by_sample(data = df,protein = result_check$marker_list$erythrocyte,group = data_group)
+# erythrocyte
+plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
+plot_protein_by_sample(data = result_correct$correct_data[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
+# coagulation
+plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$coagulation,])
+plot_protein_by_sample(data = result_correct$correct_data[rownames(result_correct$correct_data)%in%result_correct$marker_list$coagulation,])
+# platelet
+plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$platelet,])
+plot_protein_by_sample(data = result_correct$correct_data[rownames(result_correct$correct_data)%in%result_correct$marker_list$platelet,])
 plot_protein(data = df,protein = result_check$marker_list$erythrocyte)
 result <- limma_proteomics_analysis(expr_matrix = log2(df),
                                     group_matrix = data_group,
@@ -51,3 +59,5 @@ ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
                                "other protein" = "#3C5488FF")) +
   theme_classic() +
   theme(axis.text.x = element_blank())
+
+

@@ -4,7 +4,7 @@ library(ggpubr)
 library(tidyr)
 library(dplyr)
 library(readxl)
-library(DT)  # 引入 DT 包
+library(DT)
 # 定义 UI
 ui <- fluidPage(
   titlePanel("血浆蛋白污染校正与差异表达分析"),
@@ -39,12 +39,21 @@ ui <- fluidPage(
       tabsetPanel(
         tabPanel("原始数据", 
                  h3("数据文件"),
-                 DTOutput("data_table"),  # 使用 DTOutput 替换 tableOutput
+                 DTOutput("data_table"), 
                  h3("分组信息文件"),
-                 DTOutput("group_table")),  # 使用 DTOutput 替换 tableOutput
+                 DTOutput("group_table")),  
         tabPanel("数据检查结果", 
                  h3("缺失基因"),
                  verbatimTextOutput("missing_genes"),
+                 h3("QC"),
+                 tabsetPanel(
+                   tabPanel("PCA",
+                            plotOutput("pca_pre_plot")),
+                   tabPanel("heatmap", 
+                            plotOutput("heatmap_pre_plot")),
+                   tabPanel("boxplot", 
+                            plotOutput("boxplot_pre_plot"))
+                 ),
                  # 二级选项卡：污染情况
                  h3("污染marker表达情况"),
                  tabsetPanel(
@@ -61,16 +70,36 @@ ui <- fluidPage(
                  h3("样本污染情况"),
                  tabsetPanel(
                    tabPanel("CV",
-                            plotOutput("cv_plot")),
+                            plotOutput("cv_pre_plot")),
                    tabPanel("红系污染",
-                            plotOutput("erythrocyte_marker_plot")),
+                            plotOutput("erythrocyte_marker_pre_plot")),
                    tabPanel("凝血污染", 
-                            plotOutput("coagulation_marker_plot")),
+                            plotOutput("coagulation_marker_pre_plot")),
                    tabPanel("血小板污染", 
-                            plotOutput("platelet_marker_plot"))
+                            plotOutput("platelet_marker_pre_plot"))
                  )
         ),
         tabPanel("校正结果", 
+                 h3("QC"),
+                 tabsetPanel(
+                   tabPanel("PCA",
+                            plotOutput("pca_post_plot")),
+                   tabPanel("heatmap", 
+                            plotOutput("heatmap_post_plot")),
+                   tabPanel("boxplot", 
+                            plotOutput("boxplot_post_plot"))
+                 ),
+                 h3("污染检查"),
+                 tabsetPanel(
+                   tabPanel("CV",
+                            plotOutput("cv_post_plot")),
+                   tabPanel("红系污染",
+                            plotOutput("erythrocyte_marker_post_plot")),
+                   tabPanel("凝血污染", 
+                            plotOutput("coagulation_marker_post_plot")),
+                   tabPanel("血小板污染", 
+                            plotOutput("platelet_marker_post_plot"))
+                   ),
                  h3("矫正后矩阵"),
                  downloadButton("download_data", "下载校正数据"),
                  DTOutput("data_correct_table")
@@ -78,27 +107,28 @@ ui <- fluidPage(
         tabPanel("差异表达分析", 
                  tabsetPanel(
                              tabPanel("原始数据table",
-                                      DTOutput("result_de_post_table")),
+                                      downloadButton("download_de_pre", "下载差异表达结果"),
+                                      DTOutput("result_de_pre_table")),
                              tabPanel("矫正table",
-                                      downloadButton("download_de", "下载差异表达结果"),
-                                      DTOutput("result_de_table")
+                                      downloadButton("download_de_post", "下载差异表达结果"),
+                                      DTOutput("result_de_post_table")
                                       )),
                  tabsetPanel(
                              tabPanel("原始数据",
-                                      plotOutput("volc_de_post")),
-                             tabPanel("矫正table",
-                                      plotOutput("volc_de"))
+                                      plotOutput("volc_de_pre")),
+                             tabPanel("矫正",
+                                      plotOutput("volc_de_post"))
                              )
                  )
+        )
       )
     )
   )
-)
 
 
 # 定义 Server 逻辑 ----
 server <- function(input, output, session) {
-  # 读取数据 ----
+  ## 读取数据 ----
   data <- reactive({
     req(input$data_file)
     df <- read.csv(input$data_file$datapath)
@@ -114,7 +144,7 @@ server <- function(input, output, session) {
     df
   })
   
-  # 展示原始数据（使用 DT 包） ----
+  ## 展示原始数据（使用 DT 包） ----
   output$data_table <- renderDT({
     req(data())
     datatable(data(), options = list(pageLength = 10))  # 每页显示 10 行
@@ -125,7 +155,7 @@ server <- function(input, output, session) {
     datatable(data_group(), options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-  # 更新分组选择 ----
+  ## 更新分组选择 ----
   observe({
     req(data_group())
     if (!"group" %in% colnames(data_group())) {
@@ -136,12 +166,61 @@ server <- function(input, output, session) {
     updateSelectInput(session, "group2", choices = unique(data_group()$group))
   })
   
-  # 数据检查 ----
+  ## 数据检查 ----
   result_check <- eventReactive(input$run_check, {
     data_check(data(), data_group())
   })
-  
-  # 显示缺失基因 ----
+  ## 数据校正 ----
+  ## 开始数据矫正 ----
+  result_correct <- eventReactive(input$run_correct, {
+    req(result_check())
+    data_correct(data = result_check(), type = input$type)
+  })
+  ## 显示矫正后矩阵 ----
+  output$data_correct_table <- renderDT({
+    req(result_correct())
+    datatable(result_correct()$correct_data, options = list(pageLength = 10))  # 每页显示 10 行
+  })
+  ## QC(需修改) ----
+  ### pre ----
+  output$pca_pre_plot <- renderPlot({
+    source("./R/modules/QC_PCA.R")
+    req(result_check())
+    QC_PCA(data = result_check()$rawdata,
+           data_group = result_check()$group)
+  })
+  output$heatmap_pre_plot <- renderPlot({
+    source("./R/modules/QC_heatmap.R")
+    req(result_check())
+    QC_heatmap(data = result_check()$rawdata,
+           data_group = result_check()$group)
+  })
+  output$boxplot_pre_plot <- renderPlot({
+    source("./R/modules/QC_boxplot.R")
+    req(result_check())
+    QC_boxplot(data = result_check()$rawdata,
+           data_group = result_check()$group)
+  })
+  ### post ----
+  output$pca_post_plot <- renderPlot({
+    source("./R/modules/QC_PCA.R")
+    req(result_correct())
+    QC_PCA(data = result_correct()$correct_data,
+           data_group = result_correct()$group)
+  })
+  output$heatmap_post_plot <- renderPlot({
+    source("./R/modules/QC_heatmap.R")
+    req(result_correct())
+    QC_heatmap(data = result_correct()$correct_data,
+               data_group = result_correct()$group)
+  })
+  output$boxplot_post_plot <- renderPlot({
+    source("./R/modules/QC_boxplot.R")
+    req(result_correct())
+    QC_boxplot(data = result_correct()$correct_data,
+               data_group = result_correct()$group)
+  })
+  ## 显示缺失基因 ----
   output$missing_genes <- renderPrint({
     req(result_check())
     cat("红系marker缺失基因:\n")
@@ -152,17 +231,19 @@ server <- function(input, output, session) {
     print(result_check()$missing_genes$missing_platelet_genes)
   })
   
-  # 显示污染水平可视化 ----
-  output$cv_plot <- renderPlot({
-    req(data())
+  ## 显示污染水平可视化 ----
+  ### CV ----
+  output$cv_pre_plot <- renderPlot({
+    source("./R/modules/get_cv.R")
     req(result_check())
-    result_cv_coa <- get_cv(raw_data = data(),protein = result_check()$marker_list$coagulation)
-    result_cv_ery <- get_cv(raw_data = data(),protein = result_check()$marker_list$erythrocyte)
-    result_cv_pla <- get_cv(raw_data = data(),protein = result_check()$marker_list$platelet)
-    result_cv_other <- get_cv(raw_data = data()[!rownames(data())%in%
-                                              c(result_check()$marker_list$coagulation,
-                                                result_check()$marker_list$erythrocyte,
-                                                result_check()$marker_list$platelet),])
+    data <- result_check()
+    result_cv_coa <- get_cv(raw_data = data$rawdata,protein = data$marker_list$coagulation)
+    result_cv_ery <- get_cv(raw_data = data$rawdata,protein = data$marker_list$erythrocyte)
+    result_cv_pla <- get_cv(raw_data = data$rawdata,protein = data$marker_list$platelet)
+    result_cv_other <- get_cv(raw_data =  data$rawdata[!rownames(data$rawdata)%in%
+                                              c(data$marker_list$coagulation,
+                                                data$marker_list$erythrocyte,
+                                                data$marker_list$platelet),])
     result_cv_coa$type <- "coagulation"
     result_cv_ery$type <- "erythrocyte"
     result_cv_pla$type <- "platelet"
@@ -173,7 +254,8 @@ server <- function(input, output, session) {
                                         "erythrocyte",
                                         "platelet",
                                         "other protein"))
-    ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
+
+    ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
       geom_violin() +
       geom_boxplot(fill = "white",width = 0.2) +
       scale_fill_manual(values = c("coagulation" = "#E64B35FF",
@@ -183,33 +265,67 @@ server <- function(input, output, session) {
       theme_classic() +
       theme(axis.text.x = element_blank())
   })
+  output$cv_post_plot <- renderPlot({
+    source("./R/modules/get_cv.R")
+    req(result_correct())
+    data <- result_correct()
+    result_cv_coa <- get_cv(raw_data = data$correct_data,protein = data$marker_list$coagulation)
+    result_cv_ery <- get_cv(raw_data = data$correct_data,protein = data$marker_list$erythrocyte)
+    result_cv_pla <- get_cv(raw_data = data$correct_data,protein = data$marker_list$platelet)
+    result_cv_other <- get_cv(raw_data =  data$correct_data[!rownames(data$correct_data)%in%
+                                                         c(data$marker_list$coagulation,
+                                                           data$marker_list$erythrocyte,
+                                                           data$marker_list$platelet),])
+    result_cv_coa$type <- "coagulation"
+    result_cv_ery$type <- "erythrocyte"
+    result_cv_pla$type <- "platelet"
+    result_cv_other$type <- "other protein"
+    result_cv <- rbind(result_cv_coa,result_cv_ery,result_cv_pla,result_cv_other)
+    result_cv$type <- factor(result_cv$type,
+                             levels = c("coagulation",
+                                        "erythrocyte",
+                                        "platelet",
+                                        "other protein"))
+    
+    ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
+      geom_violin() +
+      geom_boxplot(fill = "white",width = 0.2) +
+      scale_fill_manual(values = c("coagulation" = "#E64B35FF",
+                                   "erythrocyte" = "#F39B7FFF",
+                                   "platelet" = "#7E6148FF",
+                                   "other protein" = "#3C5488FF")) +
+      theme_classic() +
+      theme(axis.text.x = element_blank())
+  })
+  ### erythrocyte ----
+  
   output$contamination_erythrocyte_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_contamination)) {
       return(NULL)  # 如果 plot_contamination 为 NULL，不绘制图表
     }
-    # 绘制污染水平可视化 ----
     plot(result_check()$plot_contamination$erythrocyte)
   })
+  ### platelet ----
   output$contamination_platelet_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_contamination)) {
       return(NULL)  # 如果 plot_contamination 为 NULL，不绘制图表
     }
-    # 绘制污染水平可视化 ----
     plot(result_check()$plot_contamination$platelet)
   })
+  ### coagulation ----
   output$contamination_coagulation_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_contamination)) {
       return(NULL)  # 如果 plot_contamination 为 NULL，不绘制图表
     }
-    # 绘制污染水平可视化 ----
     plot(result_check()$plot_contamination$coagulation)
   })
-  
-  # 显示红细胞标记物可视化 ----
-  output$erythrocyte_marker_plot <- renderPlot({
+  ## 显示标记物可视化 ----
+  ### pre ----
+  #### erythrocyte marker ----
+  output$erythrocyte_marker_pre_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_marker$erythrocyte)) {
       return(NULL)  # 如果 erythrocyte_marker_plot 为 NULL，不绘制图表
@@ -217,8 +333,8 @@ server <- function(input, output, session) {
     plot(result_check()$plot_marker$erythrocyte)
   })
   
-  # 显示血小板标记物可视化 ----
-  output$platelet_marker_plot <- renderPlot({
+  #### platelet marker ----
+  output$platelet_marker_pre_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_marker$platelet)) {
       return(NULL)  # 如果 platelet_marker_plot 为 NULL，不绘制图表
@@ -226,15 +342,35 @@ server <- function(input, output, session) {
     plot(result_check()$plot_marker$platelet)
   })
   
-  # 显示凝血标记物可视化 ----
-  output$coagulation_marker_plot <- renderPlot({
+  #### coagulation marker ----
+  output$coagulation_marker_pre_plot <- renderPlot({
     req(result_check())
     if (is.null(result_check()$plot_marker$coagulation)) {
       return(NULL)  # 如果 coagulation_marker_plot 为 NULL，不绘制图表
     }
     print(result_check()$plot_marker$coagulation)
   })
+  ### post(需修改) ----
+  #### erythrocyte marker ----
+  output$erythrocyte_marker_post_plot <- renderPlot({
+    req(result_correct())
+    source("./R/plot_protein_by_sample.R")
+    plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$erythrocyte,])
+  })
   
+  #### platelet marker ----
+  output$platelet_marker_post_plot <- renderPlot({
+    req(result_correct())
+    source("./R/plot_protein_by_sample.R")
+    plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$platelet,])
+  })
+  
+  #### coagulation marker ----
+  output$coagulation_marker_post_plot <- renderPlot({
+    req(result_correct())
+    source("./R/plot_protein_by_sample.R")
+    plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$coagulation,])
+  })
   # 显示污染矩阵 ----
   output$data_marker_erythrocyte <- renderDT({
     req(result_check())
@@ -249,17 +385,7 @@ server <- function(input, output, session) {
     datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-  # 数据校正 ----
-  ## 开始数据矫正 ----
-  result_correct <- eventReactive(input$run_correct, {
-    req(result_check())
-    data_correct(data = result_check(), type = input$type)
-  })
-  ## 显示矫正后矩阵 ----
-  output$data_correct_table <- renderDT({
-    req(result_correct())
-    datatable(result_correct()$correct_data, options = list(pageLength = 10))  # 每页显示 10 行
-  })
+
   
   # corrected_plot 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
@@ -271,14 +397,14 @@ server <- function(input, output, session) {
   })
   
   # 差异表达分析 ----
-  result_de <- eventReactive(input$run_de, {
+  result_de_post <- eventReactive(input$run_de, {
     req(result_correct())
     limma_proteomics_analysis(expr_matrix = log2(result_correct()$correct_data),
                               group_matrix = result_correct()$group,
                               compare = c(input$group1,input$group2),
                               p_type = "raw")
   })
-  result_de_post <- eventReactive(input$run_de, {
+  result_de_pre <- eventReactive(input$run_de, {
     req(result_correct())
     limma_proteomics_analysis(expr_matrix = log2(result_correct()$rawdata),
                               group_matrix = result_correct()$group,
@@ -287,9 +413,9 @@ server <- function(input, output, session) {
   })
   
   # 显示差异表达结果 ----
-  output$result_de_table <- renderDT({
-    req(result_de())
-    datatable(result_de(), options = list(pageLength = 10))  # 每页显示 10 行
+  output$result_de_pre_table <- renderDT({
+    req(result_de_pre())
+    datatable(result_de_pre(), options = list(pageLength = 10))  # 每页显示 10 行
   })
   output$result_de_post_table <- renderDT({
     req(result_de_post())
@@ -297,9 +423,9 @@ server <- function(input, output, session) {
   })
   
   # 绘制火山图 ----
-  output$volc_de <- renderPlot({
-    req(result_de())
-    plot_volc <- create_volcano_plot(result_de(), 
+  output$volc_de_pre <- renderPlot({
+    req(result_de_pre())
+    plot_volc <- create_volcano_plot(result_de_pre(), 
                                      p_type = "adjusted", 
                                      p_cutoff = 0.05, 
                                      logFC_cutoff = 1,
@@ -330,12 +456,22 @@ server <- function(input, output, session) {
   )
   
   # 下载差异表达结果 ----
-  output$download_de <- downloadHandler(
+  ## 矫正前 ----
+  output$download_de_pre <- downloadHandler(
     filename = function() {
       "de_results.csv"
     },
     content = function(file) {
-      write.csv(result_de(), file)
+      write.csv(result_de_pre(), file)
+    }
+  )
+  ## 矫正后 ----
+  output$download_de_post <- downloadHandler(
+    filename = function() {
+      "de_results.csv"
+    },
+    content = function(file) {
+      write.csv(result_de_post(), file)
     }
   )
 }
