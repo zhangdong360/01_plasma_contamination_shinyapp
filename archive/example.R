@@ -50,6 +50,7 @@ result_cv$type <- factor(result_cv$type,
                                     "erythrocyte",
                                     "platelet",
                                     "other protein"))
+
 ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
   geom_violin() +
   geom_boxplot(fill = "white",width = 0.2) +
@@ -58,6 +59,11 @@ ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
                                "platelet" = "#7E6148FF",
                                "other protein" = "#3C5488FF")) +
   theme_classic() +
-  theme(axis.text.x = element_blank())
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 15),
+        axis.title.x = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13))
 
 

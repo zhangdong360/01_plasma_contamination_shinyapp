@@ -1,5 +1,6 @@
 library(shiny)
 library(ggplot2)
+library(ggsignif)
 library(ggpubr)
 library(tidyr)
 library(dplyr)
@@ -222,7 +223,7 @@ server <- function(input, output, session) {
     req(result_check())
     QC_PCA(data = result_check()$rawdata,
            data_group = result_check()$group)
-  })
+  },height = 400,width = 500)
   output$heatmap_pre_plot <- renderPlot({
     source("./R/modules/QC_heatmap.R")
     req(result_check())
@@ -241,7 +242,7 @@ server <- function(input, output, session) {
     req(result_correct())
     QC_PCA(data = result_correct()$correct_data,
            data_group = result_correct()$group)
-  })
+  },height = 400,width = 500)
   output$heatmap_post_plot <- renderPlot({
     source("./R/modules/QC_heatmap.R")
     req(result_correct())
@@ -296,9 +297,17 @@ server <- function(input, output, session) {
                                    "erythrocyte" = "#F39B7FFF",
                                    "platelet" = "#7E6148FF",
                                    "other protein" = "#3C5488FF")) +
+      stat_compare_means(comparisons = list(c("other protein","coagulation"),
+                                     c("other protein","erythrocyte"),
+                                     c("other protein","platelet"))) + 
       theme_classic() +
-      theme(axis.text.x = element_blank())
-  })
+      theme(axis.text.x = element_blank(),
+            axis.text.y = element_text(size = 13),
+            axis.title.y = element_text(size = 15),
+            axis.title.x = element_text(size = 15),
+            legend.title = element_text(size = 15),
+            legend.text = element_text(size = 13))
+  },height = 400,width = 500)
   output$cv_post_plot <- renderPlot({
     source("./R/modules/get_cv.R")
     req(result_correct())
@@ -328,9 +337,17 @@ server <- function(input, output, session) {
                                    "erythrocyte" = "#F39B7FFF",
                                    "platelet" = "#7E6148FF",
                                    "other protein" = "#3C5488FF")) +
+      stat_compare_means(comparisons = list(c("other protein","coagulation"),
+                                            c("other protein","erythrocyte"),
+                                            c("other protein","platelet"))) + 
       theme_classic() +
-      theme(axis.text.x = element_blank())
-  })
+      theme(axis.text.x = element_blank(),
+            axis.text.y = element_text(size = 13),
+            axis.title.y = element_text(size = 15),
+            axis.title.x = element_text(size = 15),
+            legend.title = element_text(size = 15),
+            legend.text = element_text(size = 13))
+  },height = 400,width = 500)
   ### erythrocyte ----
   
   output$contamination_erythrocyte_plot <- renderPlot({
