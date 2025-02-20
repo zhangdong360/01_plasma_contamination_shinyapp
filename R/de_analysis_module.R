@@ -2,10 +2,10 @@ limma_proteomics_analysis <- function(expr_matrix,
                                       group_matrix, 
                                       compare = NULL, 
                                       p_cutoff = 0.05, 
-                                      logFC_cutoff = 1, 
+                                      logFC_cutoff = 0, 
                                       adjust_method = "BH", 
                                       apply_voom = FALSE,
-                                      p_type = "adjusted") {
+                                      p_type = "raw") {
   # 检查依赖包
   if (!requireNamespace("limma", quietly = TRUE)) {
     stop("Package 'limma' required but not installed.")

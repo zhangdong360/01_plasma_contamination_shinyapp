@@ -124,10 +124,10 @@ tabPanel("原始数据",
                                       downloadButton("download_de_post", "下载差异表达结果"),
                                       DTOutput("result_de_post_table")
                                       )),
-                 tabsetPanel(
-                             tabPanel("原始数据",
+                 tabsetPanel(tabPanel("VN plot",
+                                      plotOutput("vn_plot")),
+                             tabPanel("volcano plot(pre)",
                                       plotOutput("volc_de_pre")),
-                             tabPanel("矫正",
                                       plotOutput("volc_de_post"))
                              )
                  )
@@ -216,7 +216,7 @@ server <- function(input, output, session) {
     req(result_correct())
     datatable(result_correct()$correct_data, options = list(pageLength = 10))  # 每页显示 10 行
   })
-  ## QC(需修改) ----
+  ## QC ----
   ### pre ----
   output$pca_pre_plot <- renderPlot({
     source("./R/modules/QC_PCA.R")
@@ -401,7 +401,7 @@ server <- function(input, output, session) {
     }
     print(result_check()$plot_marker$coagulation)
   })
-  ### post(需修改) ----
+  ### post ----
   #### erythrocyte marker ----
   output$erythrocyte_marker_post_plot <- renderPlot({
     req(result_correct())
@@ -472,7 +472,20 @@ server <- function(input, output, session) {
     req(result_de_post())
     datatable(result_de_post(), options = list(pageLength = 10))  # 每页显示 10 行
   })
-  
+  # 绘制VN图 ----
+  output$vn_plot <- renderPlot({
+    req(result_de_post())
+    req(result_de_pre())
+    venn_plot(
+      set1 = result_de_post()[result_de_post()$significant == TRUE,"Protein"],
+      set2 = result_de_pre()[result_de_pre()$significant == TRUE,"Protein"],,
+      categories = c("post", "pre"),
+      title = "Two differences analysed results",
+      colors = c("#4daf4a", "#984ea3"),
+      alpha = 0.6,
+      print.mode = "raw"
+    )
+  },height = 500,width = 500)
   # 绘制火山图 ----
   output$volc_de_pre <- renderPlot({
     req(result_de_pre())
@@ -484,7 +497,7 @@ server <- function(input, output, session) {
                                      group_names = c(input$group1,input$group2),
                                      colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"))
     print(plot_volc)
-  })
+  },height = 500,width = 600)
   output$volc_de_post <- renderPlot({
     req(result_de_post())
     plot_volc <- create_volcano_plot(result_de_post(), 
@@ -495,7 +508,7 @@ server <- function(input, output, session) {
                                      group_names = c(input$group1,input$group2),
                                      colors = c(Up = "#E64B35", Down = "#4DBBD5", Not = "grey80"))
     print(plot_volc)
-  })
+  },height = 500,width = 600)
   # 下载校正数据 ----
   output$download_data <- downloadHandler(
     filename = function() {
@@ -526,8 +539,6 @@ server <- function(input, output, session) {
     }
   )
 }
-
-
 
 # 运行 Shiny 应用 ----
 shinyApp(ui = ui, server = server)

@@ -1,3 +1,4 @@
+
 create_volcano_plot <- function(limma_result, 
                                 p_type = "adjusted", 
                                 p_cutoff = 0.05, 
@@ -121,4 +122,78 @@ create_volcano_plot <- function(limma_result,
       )
   }
   return(volc)
+}
+venn_plot <- function(set1, set2, 
+                      categories = c("Set A", "Set B"),
+                      title = "Venn Diagram",
+                      colors = c("#1b9e77", "#d95f02"),
+                      alpha = 0.5,
+                      print.mode = c( "raw","percent"),
+                      save.plot = FALSE,
+                      filename = "venn_diagram.png") {
+  
+  # 检查并加载必要包
+  if (!require(VennDiagram)) {
+    install.packages("VennDiagram")
+    library(VennDiagram)
+  }
+  
+  # 输入处理
+  if (is.vector(set1) && is.vector(set2)) {
+    # 将向量转换为集合列表
+    universe <- unique(c(set1, set2))
+    set_list <- list(
+      set1 = unique(set1),
+      set2 = unique(set2)
+    )
+  } else if (is.list(set1) && length(set1) == 2) {
+    # 如果输入是列表的情况
+    set_list <- set1
+    universe <- unique(unlist(set1))
+  } else {
+    stop("输入应为两个向量或包含两个集合的列表")
+  }
+  
+  # 创建Venn图对象
+  venn <- VennDiagram::venn.diagram(
+    x = set_list,
+    category.names = categories,
+    filename = NULL,  # 不直接保存文件
+    output = TRUE,
+    
+    # 可视化参数
+    fill = colors,
+    alpha = alpha,
+    lty = "blank",
+    cex = 1.5,
+    cat.cex = 1.3,
+    cat.pos = c(-30, 30),
+    cat.dist = c(0.05, 0.05),
+    margin = 0.05,
+    
+    # 数值显示设置
+    print.mode = print.mode,
+    sigdigs = 2
+  )
+  
+  # 绘制图形
+  grid::grid.newpage()
+  grid::grid.draw(venn)
+  grid::grid.text(title, y = 0.95, gp = grid::gpar(fontsize = 16))
+  
+  # 可选保存功能
+  if (save.plot) {
+    ggplot2::ggsave(filename, plot = venn, 
+                    width = 8, height = 6, 
+                    dpi = 300)
+    message("图形已保存为：", filename)
+  }
+  
+  # 返回交集信息
+  overlap <- intersect(set_list[[1]], set_list[[2]])
+  return(invisible(list(
+    total_unique = length(universe),
+    overlap_count = length(overlap),
+    overlap_elements = overlap
+  )))
 }

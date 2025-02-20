@@ -66,4 +66,27 @@ ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
         legend.title = element_text(size = 15),
         legend.text = element_text(size = 13))
 
+# VN图测试----
+# 生成示例数据
+group1 <- letters[1:6]  # a-j
+group2 <- letters[5:15]  # e-o
+
+# 基本使用
+result <- venn_plot(group1, group2)
+
+# 自定义参数版本
+venn_plot(
+  set1 = group1,
+  set2 = group2,
+  categories = c("pre", "post"),
+  title = "基因表达重叠分析",
+  colors = c("#4daf4a", "#984ea3"),
+  alpha = 0.6,
+  print.mode = "raw"
+)
+
+# 查看交集信息
+cat("总唯一元素数量:", result$total_unique, "\n")
+cat("重叠元素数量:", result$overlap_count, "\n")
+cat("具体重叠元素:", paste(result$overlap_elements, collapse = ", "))
 
