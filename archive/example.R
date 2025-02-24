@@ -2,6 +2,7 @@ source("./R/data_check.R")
 source("./R/data_correct.R")
 source("./R/plot_protein_by_sample.R")
 source("./R/plot_protein.R")
+source("./R/plot_expression_correlation.R")
 source("./R/modules/get_cv.R")
 library(ggsci)
 df <- read.csv("./tests/raw_data_aggr.csv")
@@ -14,6 +15,9 @@ rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 result_check$data
 result_correct <- data_correct(data = result_check,type = "all")
+## 相关性分析 ----
+result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T)
+result <- plot_expr_corrplot(exprMatrix = result_check$data$erythrocyte[,-1:-2])
 # erythrocyte
 plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
 plot_protein_by_sample(data = result_correct$correct_data[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])

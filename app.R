@@ -67,7 +67,22 @@ ui <- fluidPage(
                                               plotOutput("contamination_coagulation_plot")),
                                      tabPanel("Platelet", 
                                               DTOutput("data_marker_platelet"),
-                                              plotOutput("contamination_platelet_plot"))
+                                              plotOutput("contamination_platelet_plot")),
+                                   ),
+                                   h4("污染marker的相关性"),
+                                   tabsetPanel(
+                                     tabPanel("Erythrocyte",
+                                              downloadButton("download_cor_data_erythrocyte", "Download Corrected Data"),
+                                              DTOutput("cor_erythrocyte_data"),
+                                              plotOutput("cor_erythrocyte_plot")),
+                                     tabPanel("Coagulation", 
+                                              downloadButton("download_cor_data_coagulation", "Download Corrected Data"),
+                                              DTOutput("cor_coagulation_data"),
+                                              plotOutput("cor_coagulation_plot")),
+                                     tabPanel("Platelet", 
+                                              downloadButton("download_cor_data_platelet", "Download Corrected Data"),
+                                              DTOutput("cor_platelet_data"),
+                                              plotOutput("cor_platelet_plot"))
                                    ),
                                    h4("Contamination Levels"),
                                    tabsetPanel(
@@ -75,9 +90,10 @@ ui <- fluidPage(
                                      tabPanel("Erythrocyte", plotOutput("erythrocyte_marker_pre_plot")),
                                      tabPanel("Coagulation", plotOutput("coagulation_marker_pre_plot")),
                                      tabPanel("Platelet", plotOutput("platelet_marker_pre_plot"))
+                                     )
                                    )
                          )
-                       )),
+                       ),
               ## Step3 ----
               tabPanel("Step 3: Correction Results",
                        sidebarLayout(
@@ -119,12 +135,13 @@ ui <- fluidPage(
                              tabPanel("Venn Diagram", plotOutput("vn_plot")),
                              tabPanel("Volcano Plot (Raw)", plotOutput("volc_de_pre")),
                              tabPanel("Volcano Plot (Corrected)", plotOutput("volc_de_post"))
+                             )
                            )
                          )
                        )
               )
   )
-)
+
 
 
 # 定义 Server 逻辑 ----
@@ -285,6 +302,48 @@ server <- function(input, output, session) {
     QC_boxplot(data = result_correct()$correct_data,
                data_group = result_correct()$group)
   })
+  ## 相关性分析及可视化（未完成） ----
+  ### ery ----
+  output$cor_erythrocyte_plot <- renderPlot({
+    source("./R/plot_expression_correlation.R")
+    req(result_check())
+    result <- plot_expression_correlation(exprMatrix = result_check()$data$erythrocyte[,-1:-2],
+                                          displayNumbers = T)
+    return(result$plot)
+  })
+  output$cor_erythrocyte_data <- renderDT({
+    req(result_check())
+    result <- plot_expression_correlation(exprMatrix = result_check()$data$erythrocyte[,-1:-2],
+                                          displayNumbers = T)
+    datatable(result$correlation_matrix, options = list(pageLength = 10))  # 每页显示 10 行
+  })
+  ### coa ----
+  output$cor_coagulation_plot <- renderPlot({
+    source("./R/plot_expression_correlation.R")
+    req(result_check())
+    result <- plot_expression_correlation(exprMatrix = result_check()$data$coagulation[,-1:-2],
+                                          displayNumbers = T)
+    return(result$plot)
+  })
+  output$cor_coagulation_data <- renderDT({
+    req(result_check())
+    result <- plot_expression_correlation(exprMatrix = result_check()$data$coagulation[,-1:-2],
+                                          displayNumbers = T)
+    datatable(result$correlation_matrix, options = list(pageLength = 10))  # 每页显示 10 行
+  })
+  ### platelet ----
+  output$cor_platelet_plot <- renderPlot({
+    source("./R/plot_expression_correlation.R")
+    req(result_check())
+    return(plot_expression_correlation(exprMatrix = result_check()$data$platelet[,-1:-2],
+                                       displayNumbers = T))
+  })
+  output$cor_platelet_data <- renderDT({
+    req(result_check())
+    result <- plot_expression_correlation(exprMatrix = result_check()$data$platelet[,-1:-2],
+                                          displayNumbers = T)
+    datatable(result$correlation_matrix, options = list(pageLength = 10))  # 每页显示 10 行
+  })
   ## 显示缺失基因（修改） ----
   output$missing_genes <- renderPrint({
     req(result_check())
@@ -302,9 +361,12 @@ server <- function(input, output, session) {
     source("./R/modules/get_cv.R")
     req(result_check())
     data <- result_check()
-    result_cv_coa <- get_cv(raw_data = data$rawdata,protein = data$marker_list$coagulation)
-    result_cv_ery <- get_cv(raw_data = data$rawdata,protein = data$marker_list$erythrocyte)
-    result_cv_pla <- get_cv(raw_data = data$rawdata,protein = data$marker_list$platelet)
+    result_cv_coa <- get_cv(raw_data = data$rawdata,
+                            protein = data$marker_list$coagulation)
+    result_cv_ery <- get_cv(raw_data = data$rawdata,
+                            protein = data$marker_list$erythrocyte)
+    result_cv_pla <- get_cv(raw_data = data$rawdata,
+                            protein = data$marker_list$platelet)
     result_cv_other <- get_cv(raw_data =  data$rawdata[!rownames(data$rawdata)%in%
                                                          c(data$marker_list$coagulation,
                                                            data$marker_list$erythrocyte,
@@ -313,7 +375,8 @@ server <- function(input, output, session) {
     result_cv_ery$type <- "erythrocyte"
     result_cv_pla$type <- "platelet"
     result_cv_other$type <- "other protein"
-    result_cv <- rbind(result_cv_coa,result_cv_ery,result_cv_pla,result_cv_other)
+    result_cv <- rbind(result_cv_coa,result_cv_ery,
+                       result_cv_pla,result_cv_other)
     result_cv$type <- factor(result_cv$type,
                              levels = c("coagulation",
                                         "erythrocyte",
@@ -493,7 +556,7 @@ server <- function(input, output, session) {
     req(result_de_pre())
     venn_plot(
       set1 = result_de_post()[result_de_post()$significant == TRUE,"Protein"],
-      set2 = result_de_pre()[result_de_pre()$significant == TRUE,"Protein"],,
+      set2 = result_de_pre()[result_de_pre()$significant == TRUE,"Protein"],
       categories = c("post", "pre"),
       title = "Two differences analysed results",
       colors = c("#4daf4a", "#984ea3"),
@@ -533,7 +596,40 @@ server <- function(input, output, session) {
       write.csv(result_correct()$correct_data, file)
     }
   )
-  
+  # 下载相关性结果 ----
+  output$download_cor_data_erythrocyte <- downloadHandler(
+    filename = function() {
+      "correlation_matrix_erythrocyte.csv"
+    },
+    content = function(file) {
+      req(result_check())
+      result <- plot_expression_correlation(exprMatrix = result_check()$data$erythrocyte[,-1:-2],
+                                            displayNumbers = T)
+      write.csv(result$correlation_matrix, file)
+    }
+  )
+  output$download_cor_data_coagulation <- downloadHandler(
+    filename = function() {
+      "correlation_matrix_coagulation.csv"
+    },
+    content = function(file) {
+      req(result_check())
+      result <- plot_expression_correlation(exprMatrix = result_check()$data$coagulation[,-1:-2],
+                                            displayNumbers = T)
+      write.csv(result$correlation_matrix, file)
+    }
+  )
+  output$download_cor_data_platelet <- downloadHandler(
+    filename = function() {
+      "correlation_matrix_platelet.csv"
+    },
+    content = function(file) {
+      req(result_check())
+      result <- plot_expression_correlation(exprMatrix = result_check()$data$platelet[,-1:-2],
+                                            displayNumbers = T)
+      write.csv(result$correlation_matrix, file)
+    }
+  )
   # 下载差异表达结果 ----
   ## 矫正前 ----
   output$download_de_pre <- downloadHandler(
