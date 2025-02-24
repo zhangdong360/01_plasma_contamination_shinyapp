@@ -6,139 +6,133 @@ library(tidyr)
 library(dplyr)
 library(readxl)
 library(DT)
-# 定义 UI
+# 定义 UI ----
 ui <- fluidPage(
-  titlePanel("血浆蛋白污染校正与差异表达分析"),
-  sidebarLayout(
-    sidebarPanel(
-      radioButtons("data_source", "选择数据来源",
-                   choices = list("Load experimental data" = "experimental", 
-                                  "Load example data" = "example"),
-                   selected = "experimental"),
-      conditionalPanel(
-        condition = "input.data_source == 'experimental'",
-        fileInput("data_file", "上传数据文件 (CSV)", accept = ".csv"),
-        fileInput("group_file", "上传分组信息文件 (CSV)", accept = ".csv")
-      ),
-      selectInput(
-        "type",
-        "校正类型",
-        choices = c("all", "erythrocyte", "platelet", "coagulation")
-      ),
-      selectInput(
-        "group1",
-        "分组1",
-        choices = NULL
-      ),
-      selectInput(
-        "group2",
-        "分组2",
-        choices = NULL
-      ),
-      actionButton("run_check", "运行数据检查"),
-      actionButton("run_correct", "运行数据校正"),
-      actionButton("run_de", "运行差异表达分析")
-    ),
-    mainPanel(
-      tabsetPanel(
-tabPanel("原始数据", 
-                 conditionalPanel(
-                   condition = "output.data_loaded == false",
-                   h4("You did not upload your data. Please upload the expression data, or load the example data to check first.")
-                 ),
-                 conditionalPanel(
-                   condition = "output.data_loaded == true",
-                   h3("数据文件"),
-                   DTOutput("data_table"), 
-                   h3("分组信息文件"),
-                   DTOutput("group_table")
-                 )),  
-        tabPanel("数据检查结果", 
-                 h3("缺失基因"),
-                 verbatimTextOutput("missing_genes"),
-                 h3("QC"),
-                 tabsetPanel(
-                   tabPanel("PCA",
-                            plotOutput("pca_pre_plot")),
-                   tabPanel("heatmap", 
-                            plotOutput("heatmap_pre_plot")),
-                   tabPanel("boxplot", 
-                            plotOutput("boxplot_pre_plot"))
-                 ),
-                 # 二级选项卡：污染情况
-                 h3("污染marker表达情况"),
-                 tabsetPanel(
-                   tabPanel("红系污染",
-                            DTOutput("data_marker_erythrocyte"),
-                            plotOutput("contamination_erythrocyte_plot")),
-                   tabPanel("凝血污染", 
-                            DTOutput("data_marker_coagulation"),
-                            plotOutput("contamination_coagulation_plot")),
-                   tabPanel("血小板污染", 
-                            DTOutput("data_marker_platelet"),
-                            plotOutput("contamination_platelet_plot"))
-                 ),
-                 h3("样本污染情况"),
-                 tabsetPanel(
-                   tabPanel("CV",
-                            plotOutput("cv_pre_plot")),
-                   tabPanel("红系污染",
-                            plotOutput("erythrocyte_marker_pre_plot")),
-                   tabPanel("凝血污染", 
-                            plotOutput("coagulation_marker_pre_plot")),
-                   tabPanel("血小板污染", 
-                            plotOutput("platelet_marker_pre_plot"))
-                 )
-        ),
-        tabPanel("校正结果", 
-                 h3("QC"),
-                 tabsetPanel(
-                   tabPanel("PCA",
-                            plotOutput("pca_post_plot")),
-                   tabPanel("heatmap", 
-                            plotOutput("heatmap_post_plot")),
-                   tabPanel("boxplot", 
-                            plotOutput("boxplot_post_plot"))
-                 ),
-                 h3("污染检查"),
-                 tabsetPanel(
-                   tabPanel("CV",
-                            plotOutput("cv_post_plot")),
-                   tabPanel("红系污染",
-                            plotOutput("erythrocyte_marker_post_plot")),
-                   tabPanel("凝血污染", 
-                            plotOutput("coagulation_marker_post_plot")),
-                   tabPanel("血小板污染", 
-                            plotOutput("platelet_marker_post_plot"))
-                   ),
-                 h3("矫正后矩阵"),
-                 downloadButton("download_data", "下载校正数据"),
-                 DTOutput("data_correct_table")
-        ),
-        tabPanel("差异表达分析", 
-                 tabsetPanel(
-                             tabPanel("原始数据table",
-                                      downloadButton("download_de_pre", "下载差异表达结果"),
-                                      DTOutput("result_de_pre_table")),
-                             tabPanel("矫正table",
-                                      downloadButton("download_de_post", "下载差异表达结果"),
-                                      DTOutput("result_de_post_table")
-                                      )),
-                 tabsetPanel(tabPanel("VN plot",
-                                      plotOutput("vn_plot")),
-                             tabPanel("volcano plot(pre)",
-                                      plotOutput("volc_de_pre")),
-                                      plotOutput("volc_de_post"))
-                             )
-                 )
-        )
-      )
-    )
+  titlePanel("Plasma Protein Contamination Correction and Differential Expression Analysis"),
+  tabsetPanel(id = "Step",
+              ## Step1 ----
+              tabPanel("Step 1: Data Input",
+                       sidebarLayout(
+                         sidebarPanel(h3("Step 1: Data Input"),
+                                      radioButtons("data_source", "Select Data Source",
+                                                   choices = list("Load experimental data" = "experimental", 
+                                                                  "Load example data" = "example"),
+                                                   selected = "experimental"),
+                                      conditionalPanel(
+                                        condition = "input.data_source == 'experimental'",
+                                        fileInput("data_file", "Upload Data File (CSV)", accept = ".csv"),
+                                        fileInput("group_file", "Upload Group Info File (CSV)", accept = ".csv")
+                                      ),
+                                      selectInput("group1", "Group 1", choices = NULL),
+                                      selectInput("group2", "Group 2", choices = NULL),
+                                      actionButton("run_check", "Run Data Check")
+                         ),
+                         mainPanel(conditionalPanel(
+                           condition = "output.data_loaded == false",
+                           h4("No data uploaded. Please upload your data or use example data to explore.")
+                         ),
+                         conditionalPanel(
+                           condition = "output.data_loaded == true",
+                           h4("Data File Preview"),
+                           DTOutput("data_table"), 
+                           h4("Group Information Preview"),
+                           DTOutput("group_table")
+                         )))
+              ),
+              ## Step2 ----
+              tabPanel("Step 2: Quality Control & Contamination Check",
+                       sidebarLayout(
+                         sidebarPanel(h3("Step 2: Contamination Assessment"),
+                                      selectInput("type", "Correction Type",
+                                                  choices = c("all", "erythrocyte", "platelet", "coagulation")),
+                                      actionButton("run_correct", "Run Correction")
+                         ),
+                         mainPanel(h3("Data Quality Assessment"),
+                                   h4("Missing Markers"),
+                                   verbatimTextOutput("missing_genes"),
+                                   h4("Quality Control"),
+                                   tabsetPanel(
+                                     tabPanel("PCA", plotOutput("pca_pre_plot")),
+                                     tabPanel("Heatmap", plotOutput("heatmap_pre_plot")),
+                                     tabPanel("Boxplot", plotOutput("boxplot_pre_plot"))
+                                   ),
+                                   h4("Contamination Marker Expression"),
+                                   tabsetPanel(
+                                     tabPanel("Erythrocyte",
+                                              DTOutput("data_marker_erythrocyte"),
+                                              plotOutput("contamination_erythrocyte_plot")),
+                                     tabPanel("Coagulation", 
+                                              DTOutput("data_marker_coagulation"),
+                                              plotOutput("contamination_coagulation_plot")),
+                                     tabPanel("Platelet", 
+                                              DTOutput("data_marker_platelet"),
+                                              plotOutput("contamination_platelet_plot"))
+                                   ),
+                                   h4("Contamination Levels"),
+                                   tabsetPanel(
+                                     tabPanel("CV Analysis", plotOutput("cv_pre_plot")),
+                                     tabPanel("Erythrocyte", plotOutput("erythrocyte_marker_pre_plot")),
+                                     tabPanel("Coagulation", plotOutput("coagulation_marker_pre_plot")),
+                                     tabPanel("Platelet", plotOutput("platelet_marker_pre_plot"))
+                                   )
+                         )
+                       )),
+              ## Step3 ----
+              tabPanel("Step 3: Correction Results",
+                       sidebarLayout(
+                         sidebarPanel(h3("Step 3: Correction Analysis"),
+                                      actionButton("run_de", "Run Differential Expression Analysis")
+                         ),
+                         mainPanel(h3("Correction Outcomes"), 
+                                   h4("Post-correction QC"),
+                                   tabsetPanel(
+                                     tabPanel("PCA", plotOutput("pca_post_plot")),
+                                     tabPanel("Heatmap", plotOutput("heatmap_post_plot")),
+                                     tabPanel("Boxplot", plotOutput("boxplot_post_plot"))
+                                   ),
+                                   h4("Post-correction Contamination"),
+                                   tabsetPanel(
+                                     tabPanel("CV Analysis", plotOutput("cv_post_plot")),
+                                     tabPanel("Erythrocyte", plotOutput("erythrocyte_marker_post_plot")),
+                                     tabPanel("Coagulation", plotOutput("coagulation_marker_post_plot")),
+                                     tabPanel("Platelet", plotOutput("platelet_marker_post_plot"))
+                                   ),
+                                   h4("Corrected Data Matrix"),
+                                   downloadButton("download_data", "Download Corrected Data"),
+                                   DTOutput("data_correct_table")
+                         )
+                       )),
+              ## Step4 DE ----
+              tabPanel("Step 4: Differential Expression",
+                       sidebarLayout(
+                         sidebarPanel(h3("Step 4: DE Analysis")),
+                         mainPanel(tabsetPanel(
+                           tabPanel("Raw Data Results",
+                                    downloadButton("download_de_pre", "Download Raw DE Results"),
+                                    DTOutput("result_de_pre_table")),
+                           tabPanel("Corrected Results",
+                                    downloadButton("download_de_post", "Download Corrected DE Results"),
+                                    DTOutput("result_de_post_table")
+                           )),
+                           tabsetPanel(
+                             tabPanel("Venn Diagram", plotOutput("vn_plot")),
+                             tabPanel("Volcano Plot (Raw)", plotOutput("volc_de_pre")),
+                             tabPanel("Volcano Plot (Corrected)", plotOutput("volc_de_post"))
+                           )
+                         )
+                       )
+              )
   )
+)
 
 
 # 定义 Server 逻辑 ----
 server <- function(input, output, session) {
+  ## 初始化 reactive values ----
+  result_check <- reactiveVal()
+  result_correct <- reactiveVal()
+  result_de_pre <- reactiveVal()
+  result_de_post <- reactiveVal()
   ## 加载示例数据 ----
   example_data <- reactive({
     df <- read.csv("./tests/raw_data_aggr.csv")  # 示例数据路径
@@ -202,14 +196,49 @@ server <- function(input, output, session) {
   })
   
   ## 数据检查 ----
-  result_check <- eventReactive(input$run_check, {
-    data_check(data(), data_group())
+  observeEvent(input$run_check, {
+    source("./R/data_check.R")
+    showModal(modalDialog("正在运行数据检查，请稍候...", footer = NULL))
+    check_result <- data_check(data(), data_group())
+    result_check(check_result)
+    removeModal()
+    updateTabsetPanel(session, "Step", selected = "Step2:Check markers and contamination levels")
   })
   ## 数据校正 ----
-  ## 开始数据矫正 ----
-  result_correct <- eventReactive(input$run_correct, {
+  observeEvent(input$run_correct, {
     req(result_check())
-    data_correct(data = result_check(), type = input$type)
+    source("./R/data_correct.R")
+    showModal(modalDialog("正在进行数据校正，请稍候...", footer = NULL))
+    correct_result <- data_correct(data = result_check(), type = input$type)
+    result_correct(correct_result)
+    removeModal()
+    updateTabsetPanel(session, "Step", selected = "Step3：校正结果")
+  })
+  ## 差异表达分析 ----
+  observeEvent(input$run_de, {
+    source("./R/de_analysis_module.R")
+    req(result_correct())
+    showModal(modalDialog("正在进行差异表达分析，请稍候...", footer = NULL))
+    
+    # 计算校正前结果
+    de_pre <- limma_proteomics_analysis(
+      expr_matrix = log2(result_correct()$rawdata),
+      group_matrix = result_correct()$group,
+      compare = c(input$group1, input$group2),
+      p_type = "raw"
+    )
+    # 计算校正后结果
+    de_post <- limma_proteomics_analysis(
+      expr_matrix = log2(result_correct()$correct_data),
+      group_matrix = result_correct()$group,
+      compare = c(input$group1, input$group2),
+      p_type = "raw"
+    )
+    
+    result_de_pre(de_pre)
+    result_de_post(de_post)
+    removeModal()
+    updateTabsetPanel(session, "Step", selected = "Step4:DE")
   })
   ## 显示矫正后矩阵 ----
   output$data_correct_table <- renderDT({
@@ -228,13 +257,13 @@ server <- function(input, output, session) {
     source("./R/modules/QC_heatmap.R")
     req(result_check())
     QC_heatmap(data = result_check()$rawdata,
-           data_group = result_check()$group)
+               data_group = result_check()$group)
   })
   output$boxplot_pre_plot <- renderPlot({
     source("./R/modules/QC_boxplot.R")
     req(result_check())
     QC_boxplot(data = result_check()$rawdata,
-           data_group = result_check()$group)
+               data_group = result_check()$group)
   })
   ### post ----
   output$pca_post_plot <- renderPlot({
@@ -276,9 +305,9 @@ server <- function(input, output, session) {
     result_cv_ery <- get_cv(raw_data = data$rawdata,protein = data$marker_list$erythrocyte)
     result_cv_pla <- get_cv(raw_data = data$rawdata,protein = data$marker_list$platelet)
     result_cv_other <- get_cv(raw_data =  data$rawdata[!rownames(data$rawdata)%in%
-                                              c(data$marker_list$coagulation,
-                                                data$marker_list$erythrocyte,
-                                                data$marker_list$platelet),])
+                                                         c(data$marker_list$coagulation,
+                                                           data$marker_list$erythrocyte,
+                                                           data$marker_list$platelet),])
     result_cv_coa$type <- "coagulation"
     result_cv_ery$type <- "erythrocyte"
     result_cv_pla$type <- "platelet"
@@ -289,7 +318,7 @@ server <- function(input, output, session) {
                                         "erythrocyte",
                                         "platelet",
                                         "other protein"))
-
+    
     ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
       geom_violin() +
       geom_boxplot(fill = "white",width = 0.2) +
@@ -298,8 +327,8 @@ server <- function(input, output, session) {
                                    "platelet" = "#7E6148FF",
                                    "other protein" = "#3C5488FF")) +
       stat_compare_means(comparisons = list(c("other protein","coagulation"),
-                                     c("other protein","erythrocyte"),
-                                     c("other protein","platelet"))) + 
+                                            c("other protein","erythrocyte"),
+                                            c("other protein","platelet"))) + 
       theme_classic() +
       theme(axis.text.x = element_blank(),
             axis.text.y = element_text(size = 13),
@@ -316,9 +345,9 @@ server <- function(input, output, session) {
     result_cv_ery <- get_cv(raw_data = data$correct_data,protein = data$marker_list$erythrocyte)
     result_cv_pla <- get_cv(raw_data = data$correct_data,protein = data$marker_list$platelet)
     result_cv_other <- get_cv(raw_data =  data$correct_data[!rownames(data$correct_data)%in%
-                                                         c(data$marker_list$coagulation,
-                                                           data$marker_list$erythrocyte,
-                                                           data$marker_list$platelet),])
+                                                              c(data$marker_list$coagulation,
+                                                                data$marker_list$erythrocyte,
+                                                                data$marker_list$platelet),])
     result_cv_coa$type <- "coagulation"
     result_cv_ery$type <- "erythrocyte"
     result_cv_pla$type <- "platelet"
@@ -436,7 +465,7 @@ server <- function(input, output, session) {
     datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
   })
   
-
+  
   
   # corrected_plot 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
@@ -447,21 +476,6 @@ server <- function(input, output, session) {
     plot_contamination(result_correct()$contamination_level, "校正后污染水平可视化", "corrected_plot")
   })
   
-  # 差异表达分析 ----
-  result_de_post <- eventReactive(input$run_de, {
-    req(result_correct())
-    limma_proteomics_analysis(expr_matrix = log2(result_correct()$correct_data),
-                              group_matrix = result_correct()$group,
-                              compare = c(input$group1,input$group2),
-                              p_type = "raw")
-  })
-  result_de_pre <- eventReactive(input$run_de, {
-    req(result_correct())
-    limma_proteomics_analysis(expr_matrix = log2(result_correct()$rawdata),
-                              group_matrix = result_correct()$group,
-                              compare = c(input$group1,input$group2),
-                              p_type = "raw")
-  })
   
   # 显示差异表达结果 ----
   output$result_de_pre_table <- renderDT({
@@ -539,6 +553,5 @@ server <- function(input, output, session) {
     }
   )
 }
-
 # 运行 Shiny 应用 ----
 shinyApp(ui = ui, server = server)

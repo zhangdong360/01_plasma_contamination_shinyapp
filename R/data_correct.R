@@ -3,7 +3,9 @@ data_correct <- function(data, type = "all") {
   # data为输入数据，type为矫正类型，默认为"all"，表示矫正所有污染类型
   # type可以为erythrocyte，coagulation，platelet中任意几种
   
+  library(MASS)
   # 定义计算均值的函数
+  
   mean_2 <- function(data) {
     for_mean <- function(data) {
       # 标准化数据
@@ -47,7 +49,6 @@ data_correct <- function(data, type = "all") {
   
   if (type == "all") {
     for (i in 1:nrow(ndata1)) {
-      library(MASS)
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
       x_eryth <- smpl2$erythrocyte
