@@ -131,7 +131,17 @@ venn_plot <- function(set1, set2,
                       print.mode = c( "raw","percent"),
                       save.plot = FALSE,
                       filename = "venn_diagram.png") {
-  
+  # 强制退出时清理日志的保险机制
+  on.exit({
+    # 更新正则表达式匹配带时间戳的日志文件
+    log_files <- list.files(
+      pattern = "^VennDiagram\\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\.[0-9]+\\.log$",
+      ignore.case = TRUE
+    )
+    if (length(log_files) > 0) {
+      suppressWarnings(file.remove(log_files))
+    }
+  })
   # 检查并加载必要包
   if (!require(VennDiagram)) {
     install.packages("VennDiagram")
@@ -189,6 +199,17 @@ venn_plot <- function(set1, set2,
     message("图形已保存为：", filename)
   }
   
+  log_files <- list.files(
+    pattern = "^VennDiagram\\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\.[0-9]+\\.log$",
+    ignore.case = TRUE
+  )
+  if (length(log_files)) {
+    tryCatch(
+      file.remove(log_files),
+      warning = function(w) message("Warning during log cleanup: ", w),
+      error = function(e) message("Error during log cleanup: ", e)
+    )
+  }
   # 返回交集信息
   overlap <- intersect(set_list[[1]], set_list[[2]])
   return(invisible(list(

@@ -23,6 +23,7 @@ ui <- fluidPage(
                                         fileInput("data_file", "Upload Data File (CSV)", accept = ".csv"),
                                         fileInput("group_file", "Upload Group Info File (CSV)", accept = ".csv")
                                       ),
+                                      h3("Grouping settings"),
                                       selectInput("group1", "Group 1", choices = NULL),
                                       selectInput("group2", "Group 2", choices = NULL),
                                       actionButton("run_check", "Run Data Check")
@@ -188,7 +189,7 @@ server <- function(input, output, session) {
   observe({
     req(data_group())
     if (!"group" %in% colnames(data_group())) {
-      showNotification("分组文件缺少'group'列!", type = "error")
+      showNotification("Group file is missing 'group' column!", type = "error")
       return()
     }
     updateSelectInput(session, "group1", choices = unique(data_group()$group))
@@ -198,7 +199,7 @@ server <- function(input, output, session) {
   ## 数据检查 ----
   observeEvent(input$run_check, {
     source("./R/data_check.R")
-    showModal(modalDialog("正在运行数据检查，请稍候...", footer = NULL))
+    showModal(modalDialog("Running data check, please wait...", footer = NULL))
     check_result <- data_check(data(), data_group())
     result_check(check_result)
     removeModal()
@@ -208,7 +209,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_correct, {
     req(result_check())
     source("./R/data_correct.R")
-    showModal(modalDialog("正在进行数据校正，请稍候...", footer = NULL))
+    showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
     correct_result <- data_correct(data = result_check(), type = input$type)
     result_correct(correct_result)
     removeModal()
@@ -218,7 +219,7 @@ server <- function(input, output, session) {
   observeEvent(input$run_de, {
     source("./R/de_analysis_module.R")
     req(result_correct())
-    showModal(modalDialog("正在进行差异表达分析，请稍候...", footer = NULL))
+    showModal(modalDialog("Running differential expression analysis, please wait...", footer = NULL))
     
     # 计算校正前结果
     de_pre <- limma_proteomics_analysis(
@@ -284,7 +285,7 @@ server <- function(input, output, session) {
     QC_boxplot(data = result_correct()$correct_data,
                data_group = result_correct()$group)
   })
-  ## 显示缺失基因 ----
+  ## 显示缺失基因（修改） ----
   output$missing_genes <- renderPrint({
     req(result_check())
     cat("红系marker缺失基因:\n")
