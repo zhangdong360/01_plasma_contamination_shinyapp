@@ -1,10 +1,11 @@
-data_check <- function(data, data_group, cutoff = 0.8) {
+data_check <- function(data, data_group, cutoff = 0.9) {
   # 函数说明 ----
   # data为输入数据矩阵，要求为样本为列，蛋白为行，矩阵中无非数值数据
   # data_group为样本分组，要求为：id列为样本名，和colnames(data)相同，group为输入样本的生物学分组
-  # cutoff为相关性阈值，默认0.8
+  # cutoff为相关性阈值，默认0.9
   
   # 加载必要的库
+  library(Hmisc)
   library(readxl)
   library(ggplot2)
   library(ggpubr)
@@ -47,17 +48,17 @@ data_check <- function(data, data_group, cutoff = 0.8) {
   # 定义相关性分析函数
   # Correlation analysis function
   correlate_markers <- function(data_filtered) {
-    # 转换为宽格式
     data_spread <- spread(data_filtered, key, value)
-    correlation_matrix <- cor(data_spread %>% dplyr::select(-id, -group), use = "pairwise.complete.obs")
-    return(correlation_matrix)
+    numeric_data <- data_spread %>% dplyr::select(-id, -group)
+    corr_results <- Hmisc::rcorr(as.matrix(numeric_data), type = "pearson")
+    return(list(r = corr_results$r, P = corr_results$P))
   }
   
   # 定义基于p值和相关性过滤标记物的函数
   # Filter markers based on p-value and correlation
-  filter_markers <- function(keys_with_high_pvalue, corr_matrix) {
+  filter_markers <- function(keys_with_high_pvalue, corr_matrix_r) {
     # 提取相关性高的标记物
-    high_corr_keys <- colnames(corr_matrix)[apply(corr_matrix, 2, function(x) any(abs(x) > cutoff & abs(x) < 1))]
+    high_corr_keys <- colnames(corr_matrix_r)[apply(corr_matrix_r, 2, function(x) any(abs(x) > cutoff & abs(x) < 1))]
     filtered_keys <- intersect(keys_with_high_pvalue, high_corr_keys)
     return(filtered_keys)
   }
@@ -168,11 +169,11 @@ data_check <- function(data, data_group, cutoff = 0.8) {
   ## Filter markers based on p-value and correlation ----
   # 过滤标记物
   filtered_keys_erythrocyte <- filter_markers(erythrocyte_results$keys_with_high_pvalue,
-                                              corr_matrix_erythrocyte)
+                                              corr_matrix_erythrocyte$r)
   filtered_keys_platelet <- filter_markers(platelet_results$keys_with_high_pvalue, 
-                                           corr_matrix_platelet)
+                                           corr_matrix_platelet$r)
   filtered_keys_coagulation <- filter_markers(coagulation_results$keys_with_high_pvalue,
-                                              corr_matrix_coagulation)
+                                              corr_matrix_coagulation$r)
   
   marker_list <- list(
     erythrocyte = filtered_keys_erythrocyte,

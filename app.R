@@ -26,6 +26,8 @@ ui <- fluidPage(
                                       h3("Grouping settings"),
                                       selectInput("group1", "Group 1", choices = NULL),
                                       selectInput("group2", "Group 2", choices = NULL),
+                                      sliderInput("cor_cutoff", "Correlation Cutoff",
+                                                  min = 0.5, max = 0.99, value = 0.9, step = 0.01),
                                       actionButton("run_check", "Run Data Check")
                          ),
                          mainPanel(conditionalPanel(
@@ -41,9 +43,12 @@ ui <- fluidPage(
                          )))
               ),
               ## Step2 ----
-              tabPanel("Step 2: Quality Control & Contamination Check",
+              tabPanel("Step 2: Check markers and contamination levels",
                        sidebarLayout(
-                         sidebarPanel(h3("Step 2: Contamination Assessment"),
+                         sidebarPanel(sliderInput("cor_cutoff_step2", "Correlation Cutoff",
+                                                   min = 0.5, max = 0.99, value = 0.9, step = 0.01),
+                                      actionButton("rerun_check_step2", "Re-run Data Check"),
+                                      h3("Step 2: Contamination Assessment"),
                                       selectInput("type", "Correction Type",
                                                   choices = c("all", "erythrocyte", "platelet", "coagulation")),
                                       actionButton("run_correct", "Run Correction")
@@ -151,6 +156,18 @@ server <- function(input, output, session) {
   result_correct <- reactiveVal()
   result_de_pre <- reactiveVal()
   result_de_post <- reactiveVal()
+  ## cor_cutoff响应值 ----
+  # 新增cor_cutoff响应式值
+  cor_cutoff <- reactive({
+    input$cor_cutoff
+  })
+  # 同步滑块值
+  observeEvent(input$cor_cutoff, {
+    updateSliderInput(session, "cor_cutoff_step2", value = input$cor_cutoff)
+  })
+  observeEvent(input$cor_cutoff_step2, {
+    updateSliderInput(session, "cor_cutoff", value = input$cor_cutoff_step2)
+  })
   ## 加载示例数据 ----
   example_data <- reactive({
     df <- read.csv("./tests/raw_data_aggr.csv")  # 示例数据路径
@@ -214,13 +231,23 @@ server <- function(input, output, session) {
   })
   
   ## 数据检查 ----
-  observeEvent(input$run_check, {
-    source("./R/data_check.R")
+  ### 数据检查（封装函数）----
+  run_data_check <- function() {
+    source("./R/data_check.R", local = TRUE)
     showModal(modalDialog("Running data check, please wait...", footer = NULL))
-    check_result <- data_check(data(), data_group())
+    check_result <- data_check(data(), data_group(), cutoff = cor_cutoff())
     result_check(check_result)
     removeModal()
-    updateTabsetPanel(session, "Step", selected = "Step2:Check markers and contamination levels")
+  }
+  ### Step1检查按钮 ----
+  observeEvent(input$run_check, {
+    run_data_check()
+    updateTabsetPanel(session, "Step", selected = "Step 2: Check markers and contamination levels")
+  })
+  
+  ### Step2重新检查按钮 ----
+  observeEvent(input$rerun_check_step2, {
+    run_data_check()
   })
   ## 数据校正 ----
   observeEvent(input$run_correct, {
@@ -230,7 +257,7 @@ server <- function(input, output, session) {
     correct_result <- data_correct(data = result_check(), type = input$type)
     result_correct(correct_result)
     removeModal()
-    updateTabsetPanel(session, "Step", selected = "Step3：校正结果")
+    updateTabsetPanel(session, "Step", selected = "Step 3: Correction Results")
   })
   ## 差异表达分析 ----
   observeEvent(input$run_de, {
@@ -256,7 +283,7 @@ server <- function(input, output, session) {
     result_de_pre(de_pre)
     result_de_post(de_post)
     removeModal()
-    updateTabsetPanel(session, "Step", selected = "Step4:DE")
+    updateTabsetPanel(session, "Step", selected = "Step 4: Differential Expression")
   })
   ## 显示矫正后矩阵 ----
   output$data_correct_table <- renderDT({
@@ -307,37 +334,37 @@ server <- function(input, output, session) {
   output$cor_erythrocyte_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$erythrocyte,
+    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$erythrocyte$r,
                                           displayNumbers = T,input_type = "correlation")
     return(result$plot)
   })
   output$cor_erythrocyte_data <- renderDT({
     req(result_check())
-    datatable(result_check()$correlation$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(result_check()$correlation$erythrocyte$r, options = list(pageLength = 10))  # 每页显示 10 行
   })
   ### coa ----
   output$cor_coagulation_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$coagulation,
+    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$coagulation$r,
                                           displayNumbers = T,input_type = "correlation")
     return(result$plot)
   })
   output$cor_coagulation_data <- renderDT({
     req(result_check())
-    datatable(result_check()$correlation$coagulation, options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(result_check()$correlation$coagulation$r, options = list(pageLength = 10))  # 每页显示 10 行
   })
   ### platelet ----
   output$cor_platelet_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$platelet,
+    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$platelet$r,
                                        displayNumbers = T,input_type = "correlation")
     return(result$plot)
   })
   output$cor_platelet_data <- renderDT({
     req(result_check())
-    datatable(result_check()$correlation$platelet, options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(result_check()$correlation$platelet$r, options = list(pageLength = 10))  # 每页显示 10 行
   })
   ## 显示缺失基因（修改） ----
   output$missing_genes <- renderPrint({
@@ -598,7 +625,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(result_check())
-      write.csv(result_check()$correlation$erythrocyte, file)
+      write.csv(result_check()$correlation$erythrocyte$r, file)
     }
   )
   output$download_cor_data_coagulation <- downloadHandler(
@@ -607,7 +634,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(result_check())
-      write.csv(result_check()$correlation$coagulation, file)
+      write.csv(result_check()$correlation$coagulation$r, file)
     }
   )
   output$download_cor_data_platelet <- downloadHandler(
@@ -616,7 +643,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(result_check())
-      write.csv(result_check()$correlation$platelet, file)
+      write.csv(result_check()$correlation$platelet$r, file)
     }
   )
   # 下载差异表达结果 ----
