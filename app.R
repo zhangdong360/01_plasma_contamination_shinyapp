@@ -307,42 +307,37 @@ server <- function(input, output, session) {
   output$cor_erythrocyte_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$data$erythrocyte[,-1:-2],
-                                          displayNumbers = T)
+    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$erythrocyte,
+                                          displayNumbers = T,input_type = "correlation")
     return(result$plot)
   })
   output$cor_erythrocyte_data <- renderDT({
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$data$erythrocyte[,-1:-2],
-                                          displayNumbers = T)
-    datatable(result$correlation_matrix, options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(result_check()$correlation$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
   })
   ### coa ----
   output$cor_coagulation_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$data$coagulation[,-1:-2],
-                                          displayNumbers = T)
+    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$coagulation,
+                                          displayNumbers = T,input_type = "correlation")
     return(result$plot)
   })
   output$cor_coagulation_data <- renderDT({
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$data$coagulation[,-1:-2],
-                                          displayNumbers = T)
-    datatable(result$correlation_matrix, options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(result_check()$correlation$coagulation, options = list(pageLength = 10))  # 每页显示 10 行
   })
   ### platelet ----
   output$cor_platelet_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
     req(result_check())
-    return(plot_expression_correlation(exprMatrix = result_check()$data$platelet[,-1:-2],
-                                       displayNumbers = T))
+    result <- plot_expression_correlation(exprMatrix = result_check()$correlation$platelet,
+                                       displayNumbers = T,input_type = "correlation")
+    return(result$plot)
   })
   output$cor_platelet_data <- renderDT({
     req(result_check())
-    result <- plot_expression_correlation(exprMatrix = result_check()$data$platelet[,-1:-2],
-                                          displayNumbers = T)
-    datatable(result$correlation_matrix, options = list(pageLength = 10))  # 每页显示 10 行
+    datatable(result_check()$correlation$platelet, options = list(pageLength = 10))  # 每页显示 10 行
   })
   ## 显示缺失基因（修改） ----
   output$missing_genes <- renderPrint({
@@ -603,9 +598,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(result_check())
-      result <- plot_expression_correlation(exprMatrix = result_check()$data$erythrocyte[,-1:-2],
-                                            displayNumbers = T)
-      write.csv(result$correlation_matrix, file)
+      write.csv(result_check()$correlation$erythrocyte, file)
     }
   )
   output$download_cor_data_coagulation <- downloadHandler(
@@ -614,9 +607,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(result_check())
-      result <- plot_expression_correlation(exprMatrix = result_check()$data$coagulation[,-1:-2],
-                                            displayNumbers = T)
-      write.csv(result$correlation_matrix, file)
+      write.csv(result_check()$correlation$coagulation, file)
     }
   )
   output$download_cor_data_platelet <- downloadHandler(
@@ -625,9 +616,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(result_check())
-      result <- plot_expression_correlation(exprMatrix = result_check()$data$platelet[,-1:-2],
-                                            displayNumbers = T)
-      write.csv(result$correlation_matrix, file)
+      write.csv(result_check()$correlation$platelet, file)
     }
   )
   # 下载差异表达结果 ----

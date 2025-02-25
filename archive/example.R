@@ -16,8 +16,10 @@ result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 result_check$data
 result_correct <- data_correct(data = result_check,type = "all")
 ## 相关性分析 ----
-result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T)
+result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T,corMethod = "pearson")
 result <- plot_expr_corrplot(exprMatrix = result_check$data$erythrocyte[,-1:-2])
+result <- plot_expression_correlation(exprMatrix = result_check$correlation$erythrocyte,displayNumbers = T,input_type = "correlation")
+
 # erythrocyte
 plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
 plot_protein_by_sample(data = result_correct$correct_data[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
