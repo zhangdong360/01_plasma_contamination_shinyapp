@@ -21,7 +21,8 @@ result <- plot_expr_corrplot(exprMatrix = result_check$data$erythrocyte[,-1:-2])
 result <- plot_expression_correlation(exprMatrix = result_check$correlation$erythrocyte$r,displayNumbers = T,input_type = "correlation")
 plot_pvalue_distribution(pvalue_matrix =  result_check$correlation$erythrocyte$P)
 
-plot_pvalue_distribution(data =  result_check$rawdata)
+plot_stat_distribution(data =  result_check$rawdata,statistic = )
+
 # erythrocyte
 plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
 plot_protein_by_sample(data = result_correct$correct_data[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])
