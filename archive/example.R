@@ -26,7 +26,7 @@ df <- subset(df,select = -c(From,To))  # 删除第一列
 df
 data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
-# cov
+
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 result_check$data
 result_correct <- data_correct(data = result_check,

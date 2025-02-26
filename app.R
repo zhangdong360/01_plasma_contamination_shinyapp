@@ -56,6 +56,11 @@ ui <- fluidPage(
                          mainPanel(h3("Data Quality Assessment"),
                                    h4("Missing Markers"),
                                    verbatimTextOutput("missing_genes"),
+                                   tabsetPanel(
+                                     tabPanel("Erythrocyte", DTOutput("erythrocyte_marker_table")),
+                                     tabPanel("Coagulation", DTOutput("coagulation_marker_table")),
+                                     tabPanel("Platelet", DTOutput("platelet_marker_table"))
+                                   ),
                                    h4("Quality Control"),
                                    tabsetPanel(
                                      tabPanel("correlation", fluidRow(
@@ -180,6 +185,51 @@ server <- function(input, output, session) {
   observeEvent(input$cor_cutoff_step2, {
     updateSliderInput(session, "cor_cutoff", value = input$cor_cutoff_step2)
   })
+  # 新增反应式值存储用户选择 ----
+  selected_markers <- reactiveValues(
+    erythrocyte = NULL,
+    coagulation = NULL,
+    platelet = NULL
+  )
+  # 渲染marker表格 ----
+  output$erythrocyte_marker_table <- renderDT({
+    req(result_check())
+    df <- result_check()$marker_stats$stats_erythrocyte
+    datatable(df, selection = list(mode = 'multiple'), 
+              options = list(pageLength = 5))
+  })
+  # 类似处理其他两个表格
+  output$coagulation_marker_table <- renderDT({
+    req(result_check())
+    df <- result_check()$marker_stats$stats_coagulation
+    datatable(df, selection = list(mode = 'multiple'), 
+              options = list(pageLength = 5))
+  })
+  output$platelet_marker_table <- renderDT({
+    req(result_check())
+    df <- result_check()$marker_stats$stats_platelet
+    datatable(df, selection = list(mode = 'multiple'), 
+              options = list(pageLength = 5))
+  })
+  # 获取用户选择 ----
+  observe({
+    req(result_check())
+    
+    # Erythrocyte
+    erythrocyte_data <- result_check()$marker_stats$stats_erythrocyte 
+    selected_erythrocyte <- erythrocyte_data$key[input$erythrocyte_marker_table_rows_selected]
+    selected_markers$erythrocyte <- if(length(selected_erythrocyte) > 0) selected_erythrocyte else NULL
+    
+    # 类似处理其他两个类型
+    # coagulation
+    coagulation_data <- result_check()$marker_stats$stats_coagulation 
+    selected_coagulation <- coagulation_data$key[input$coagulation_marker_table_rows_selected]
+    selected_markers$coagulation <- if(length(selected_coagulation) > 0) selected_coagulation else NULL
+    # platelet
+    platelet_data <- result_check()$marker_stats$stats_platelet
+    selected_platelet <- platelet_data$key[input$platelet_marker_table_rows_selected]
+    selected_markers$platelet <- if(length(selected_platelet) > 0) selected_platelet else NULL
+  })
   ## 加载示例数据 ----
   example_data <- reactive({
     df <- read.csv("./tests/raw_data_aggr.csv")  # 示例数据路径
@@ -247,7 +297,17 @@ server <- function(input, output, session) {
   run_data_check <- function() {
     source("./R/data_check.R", local = TRUE)
     showModal(modalDialog("Running data check, please wait...", footer = NULL))
-    check_result <- data_check(data(), data_group(), cutoff = cor_cutoff())
+    req(data(), data_group(), input$group1, input$group2)
+    check_result <- data_check(
+      data = data(),
+      data_group = data_group(),
+      cutoff = cor_cutoff(),
+      group1 = input$group1,
+      group2 = input$group2,
+      custom_erythrocyte = selected_markers$erythrocyte,
+      custom_coagulation = selected_markers$coagulation,
+      custom_platelet = selected_markers$platelet
+    )
     result_check(check_result)
     removeModal()
   }
