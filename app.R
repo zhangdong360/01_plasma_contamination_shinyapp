@@ -58,10 +58,16 @@ ui <- fluidPage(
                                    verbatimTextOutput("missing_genes"),
                                    h4("Quality Control"),
                                    tabsetPanel(
+                                     tabPanel("correlation", fluidRow(
+                                       column(width = 5,
+                                              plotOutput("correlation_p_pre_plot")
+                                       ),
+                                       column(width = 5,
+                                              plotOutput("correlation_r_pre_plot")))),
                                      tabPanel("PCA", plotOutput("pca_pre_plot")),
                                      tabPanel("Heatmap", plotOutput("heatmap_pre_plot")),
                                      tabPanel("Boxplot", plotOutput("boxplot_pre_plot"))
-                                   ),
+                                     ),
                                    h4("Contamination Marker Expression"),
                                    tabsetPanel(
                                      tabPanel("Erythrocyte",
@@ -72,7 +78,7 @@ ui <- fluidPage(
                                               plotOutput("contamination_coagulation_plot")),
                                      tabPanel("Platelet", 
                                               DTOutput("data_marker_platelet"),
-                                              plotOutput("contamination_platelet_plot")),
+                                              plotOutput("contamination_platelet_plot"))
                                    ),
                                    h4("污染marker的相关性"),
                                    tabsetPanel(
@@ -108,6 +114,12 @@ ui <- fluidPage(
                          mainPanel(h3("Correction Outcomes"), 
                                    h4("Post-correction QC"),
                                    tabsetPanel(
+                                     tabPanel("correlation", fluidRow(
+                                       column(width = 5,
+                                              plotOutput("correlation_p_post_plot")
+                                       ),
+                                       column(width = 5,
+                                              plotOutput("correlation_r_post_plot")))),
                                      tabPanel("PCA", plotOutput("pca_post_plot")),
                                      tabPanel("Heatmap", plotOutput("heatmap_post_plot")),
                                      tabPanel("Boxplot", plotOutput("boxplot_post_plot"))
@@ -292,18 +304,34 @@ server <- function(input, output, session) {
   })
   ## QC ----
   ### pre ----
+  #### correlation ----
+  output$correlation_p_pre_plot <- renderPlot({
+    source("./R/plot_stat_distribution.R")
+    req(result_check())
+    plot_stat_distribution(data = result_check()$rawdata,
+                           type = "pearson", statistic = "pvalue", alpha = 0.05)
+  },height = 400,width = 500)
+  output$correlation_r_pre_plot <- renderPlot({
+    source("./R/plot_stat_distribution.R")
+    req(result_check())
+    plot_stat_distribution(data = result_check()$rawdata,
+                           type = "pearson", statistic = "correlation", alpha = 0.05)
+  },height = 400,width = 500)
+  #### pca ----
   output$pca_pre_plot <- renderPlot({
     source("./R/modules/QC_PCA.R")
     req(result_check())
     QC_PCA(data = result_check()$rawdata,
            data_group = result_check()$group)
   },height = 400,width = 500)
+  #### heatmap ----
   output$heatmap_pre_plot <- renderPlot({
     source("./R/modules/QC_heatmap.R")
     req(result_check())
     QC_heatmap(data = result_check()$rawdata,
                data_group = result_check()$group)
   })
+  #### boxplot ----
   output$boxplot_pre_plot <- renderPlot({
     source("./R/modules/QC_boxplot.R")
     req(result_check())
@@ -311,18 +339,34 @@ server <- function(input, output, session) {
                data_group = result_check()$group)
   })
   ### post ----
+  #### correlation ----
+  output$correlation_p_post_plot <- renderPlot({
+    source("./R/plot_stat_distribution.R")
+    req(result_correct())
+    plot_stat_distribution(data = result_correct()$correct_data,
+                           type = "pearson", statistic = "pvalue", alpha = 0.05)
+  },height = 400,width = 500)
+  output$correlation_r_post_plot <- renderPlot({
+    source("./R/plot_stat_distribution.R")
+    req(result_correct())
+    plot_stat_distribution(data = result_correct()$correct_data,
+                           type = "pearson", statistic = "correlation", alpha = 0.05)
+  },height = 400,width = 500)
+  #### pca ----
   output$pca_post_plot <- renderPlot({
     source("./R/modules/QC_PCA.R")
     req(result_correct())
     QC_PCA(data = result_correct()$correct_data,
            data_group = result_correct()$group)
   },height = 400,width = 500)
+  #### heatmap ----
   output$heatmap_post_plot <- renderPlot({
     source("./R/modules/QC_heatmap.R")
     req(result_correct())
     QC_heatmap(data = result_correct()$correct_data,
                data_group = result_correct()$group)
   })
+  #### boxplot ----
   output$boxplot_post_plot <- renderPlot({
     source("./R/modules/QC_boxplot.R")
     req(result_correct())

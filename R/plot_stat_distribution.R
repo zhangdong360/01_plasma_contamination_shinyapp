@@ -10,6 +10,11 @@ plot_stat_distribution <- function(data, type = "pearson", statistic = "pvalue",
     stop("请先安装Hmisc包: install.packages('Hmisc')")
   }
   
+  # 检查statistic参数有效性
+  if (!statistic %in% c("pvalue", "correlation")) {
+    stop("参数statistic必须是'pvalue'或'correlation'")
+  }
+  
   # 设置默认参数
   if (is.null(title)) {
     title <- if (statistic == "pvalue") "P值分布直方图" else "相关系数分布直方图"
@@ -87,18 +92,18 @@ plot_stat_distribution <- function(data, type = "pearson", statistic = "pvalue",
   }
   
   # 添加通用元素
-  caption_text <- if (statistic == "pvalue") {
-    sprintf("显著性阈值: α = %.2f (红色虚线)\n绿色曲线：核密度估计", alpha)
-  } else {
-    "绿色曲线：核密度估计"
-  }
+  # caption_text <- if (statistic == "pvalue") {
+  #   sprintf("显著性阈值: α = %.2f (红色虚线)\n绿色曲线：核密度估计", alpha)
+  # } else {
+  #   "绿色曲线：核密度估计"
+  # }
   
   p <- p +
     ggplot2::labs(
       title = title,
       x = xlab,
-      y = ylab,
-      caption = caption_text
+      y = ylab
+      # caption = caption_text
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(
