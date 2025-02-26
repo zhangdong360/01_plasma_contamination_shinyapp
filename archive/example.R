@@ -5,23 +5,50 @@ source("./R/plot_protein.R")
 source("./R/plot_expression_correlation.R")
 source("./R/modules/get_cv.R")
 library(ggsci)
+# test
 df <- read.csv("./tests/raw_data_aggr.csv")
-
 rownames(df) <- df[, 1]  # 将第一列设置为行名
 df <- df[, -1, drop = FALSE]  # 删除第一列
 df
 data_group <- read.csv("./tests/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+# cov
+df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/Plasma_matrix_after_seqknn.csv")
+colnames(df)[1] <- "From"
+library(readr)
+gene_name <- read_delim("../01_plasma_contamination/01_rawdata/data_COVID_19/idmapping_2025_02_26.tsv", 
+                           delim = "\t", escape_double = FALSE, 
+                           trim_ws = TRUE)
+gene_name <- as.data.frame(gene_name)
+df <- merge(gene_name,df, by = "From")
+rownames(df) <- df$To  # 将第一列设置为行名
+df <- subset(df,select = -c(From,To))  # 删除第一列
+df
+data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/group.csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+# cov
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 result_check$data
-result_correct <- data_correct(data = result_check,type = "all")
+result_correct <- data_correct(data = result_check,
+                               type = "all",
+                               erythrocyte_marker = result_check$gene$erythrocyte,
+                               coagulation_marker = result_check$gene$coagulation,
+                               platelet_marker = result_check$gene$platelet)
 ## 相关性分析 ----
 result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T,corMethod = "pearson")
 result <- plot_expr_corrplot(exprMatrix = result_check$data$erythrocyte[,-1:-2])
 result <- plot_expression_correlation(exprMatrix = result_check$correlation$erythrocyte$r,displayNumbers = T,input_type = "correlation")
 plot_pvalue_distribution(pvalue_matrix =  result_check$correlation$erythrocyte$P)
 
-plot_stat_distribution(data =  result_check$rawdata,statistic = )
+plot_stat_distribution(data =  result_check$rawdata,statistic = "correlation")
+test_result <- Hmisc::rcorr(as.matrix(t( result_check$rawdata)), type = "pearson")
+statistic <- "correlation"
+values <- if (statistic == "pvalue") test_result$P else test_result$r
+
+data_ggplot <- data.frame(value = values[upper.tri(values)])
+ggplot(data_ggplot,aes(x = value)) + 
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black") + 
+  geom_density(color = "red")
 
 # erythrocyte
 plot_protein_by_sample(data = result_correct$rawdata[rownames(result_correct$correct_data)%in%result_correct$marker_list$erythrocyte,])

@@ -1,4 +1,8 @@
-data_correct <- function(data, type = "all") {
+data_correct <- function(data, 
+                         type = "all",
+                         erythrocyte_marker,
+                         coagulation_marker,
+                         platelet_marker) {
   # 函数说明 ----
   # data为输入数据，type为矫正类型，默认为"all"，表示矫正所有污染类型
   # type可以为erythrocyte，coagulation，platelet中任意几种
@@ -26,9 +30,9 @@ data_correct <- function(data, type = "all") {
     rownames(data$data$platelet) <- data$data$platelet$id
     
     # 计算污染水平
-    list1 <- for_mean(data$data$erythrocyte[, colnames(data$data$erythrocyte) %in% data$gene$erythrocyte])
-    list2 <- for_mean(data$data$platelet[, colnames(data$data$platelet) %in% data$gene$platelet])
-    list3 <- for_mean(data$data$coagulation[, colnames(data$data$coagulation) %in% data$gene$coagulation])
+    list1 <- for_mean(data$data$erythrocyte[, colnames(data$data$erythrocyte) %in% erythrocyte_marker])
+    list2 <- for_mean(data$data$platelet[, colnames(data$data$platelet) %in% platelet_marker])
+    list3 <- for_mean(data$data$coagulation[, colnames(data$data$coagulation) %in% coagulation_marker])
     
     smpl2 <- data.frame(
       erythrocyte = list1,

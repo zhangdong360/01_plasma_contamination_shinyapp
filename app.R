@@ -266,7 +266,11 @@ server <- function(input, output, session) {
     req(result_check())
     source("./R/data_correct.R")
     showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
-    correct_result <- data_correct(data = result_check(), type = input$type)
+    correct_result <- data_correct(data = result_check(), 
+                                   type = input$type,
+                                   erythrocyte_marker = result_check()$gene$erythrocyte,
+                                   coagulation_marker = result_check()$gene$coagulation,
+                                   platelet_marker = result_check()$gene$platelet)
     result_correct(correct_result)
     removeModal()
     updateTabsetPanel(session, "Step", selected = "Step 3: Correction Results")
@@ -373,7 +377,7 @@ server <- function(input, output, session) {
     QC_boxplot(data = result_correct()$correct_data,
                data_group = result_correct()$group)
   })
-  ## 相关性分析及可视化（未完成） ----
+  ## 相关性分析及可视化 ----
   ### ery ----
   output$cor_erythrocyte_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
@@ -381,7 +385,7 @@ server <- function(input, output, session) {
     result <- plot_expression_correlation(exprMatrix = result_check()$correlation$erythrocyte$r,
                                           displayNumbers = T,input_type = "correlation")
     return(result$plot)
-  })
+  },height = 400,width = 800)
   output$cor_erythrocyte_data <- renderDT({
     req(result_check())
     datatable(result_check()$correlation$erythrocyte$r, options = list(pageLength = 10))  # 每页显示 10 行
@@ -393,7 +397,7 @@ server <- function(input, output, session) {
     result <- plot_expression_correlation(exprMatrix = result_check()$correlation$coagulation$r,
                                           displayNumbers = T,input_type = "correlation")
     return(result$plot)
-  })
+  },height = 400,width = 800)
   output$cor_coagulation_data <- renderDT({
     req(result_check())
     datatable(result_check()$correlation$coagulation$r, options = list(pageLength = 10))  # 每页显示 10 行
@@ -405,7 +409,7 @@ server <- function(input, output, session) {
     result <- plot_expression_correlation(exprMatrix = result_check()$correlation$platelet$r,
                                        displayNumbers = T,input_type = "correlation")
     return(result$plot)
-  })
+  },height = 400,width = 800)
   output$cor_platelet_data <- renderDT({
     req(result_check())
     datatable(result_check()$correlation$platelet$r, options = list(pageLength = 10))  # 每页显示 10 行
