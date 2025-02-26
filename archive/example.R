@@ -29,11 +29,37 @@ rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 result_check$data
+result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(result_check$rawdata)), type = "pearson")
+result_cor <- as.data.frame(result_cor$r)
+
+result_cor_erythrocyte <- abs(result_cor[,colnames(result_cor)%in%c(result_check$marker_list$erythrocyte)])
+result_cor_coagulation <- abs(result_cor[,colnames(result_cor)%in%c(result_check$marker_list$coagulation)])
+result_cor_platelet <- abs(result_cor[,colnames(result_cor)%in%c(result_check$marker_list$platelet)])
+result_cor_erythrocyte$avg <- NA
+result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
+for (i in 1:dim(result_cor_erythrocyte)[1]) {
+  result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,1:dim(result_cor_erythrocyte)[2]-1])
+}
+
+result_cor_coagulation$avg <- NA
+result_cor_coagulation <- as.matrix(result_cor_coagulation)
+for (i in 1:dim(result_cor_coagulation)[1]) {
+  result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,1:dim(result_cor_coagulation)[2]-1])
+}
+
+result_cor_platelet$avg <- NA
+result_cor_platelet <- as.matrix(result_cor_platelet)
+for (i in 1:dim(result_cor_platelet)[1]) {
+  result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,1:dim(result_cor_platelet)[2]-1])
+}
+
+
 result_correct <- data_correct(data = result_check,
                                type = "all",
                                erythrocyte_marker = result_check$gene$erythrocyte,
                                coagulation_marker = result_check$gene$coagulation,
                                platelet_marker = result_check$gene$platelet)
+
 ## 相关性分析 ----
 result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T,corMethod = "pearson")
 result <- plot_expr_corrplot(exprMatrix = result_check$data$erythrocyte[,-1:-2])

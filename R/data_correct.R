@@ -50,6 +50,30 @@ data_correct <- function(data,
   b <- matrix(nrow = nrow(rawdata), ncol = ncol(smpl2))
   rownames(b) <- rownames(rawdata)
   colnames(b) <- colnames(smpl2)
+  # 计算约束系数 ----
+  result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(data$rawdata)), type = "pearson")
+  result_cor <- as.data.frame(result_cor$r)
+  
+  result_cor_erythrocyte <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$erythrocyte)])
+  result_cor_coagulation <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$coagulation)])
+  result_cor_platelet <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$platelet)])
+  result_cor_erythrocyte$avg <- NA
+  result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
+  for (i in 1:dim(result_cor_erythrocyte)[1]) {
+    result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,1:dim(result_cor_erythrocyte)[2]-1])
+  }
+  
+  result_cor_coagulation$avg <- NA
+  result_cor_coagulation <- as.matrix(result_cor_coagulation)
+  for (i in 1:dim(result_cor_coagulation)[1]) {
+    result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,1:dim(result_cor_coagulation)[2]-1])
+  }
+  
+  result_cor_platelet$avg <- NA
+  result_cor_platelet <- as.matrix(result_cor_platelet)
+  for (i in 1:dim(result_cor_platelet)[1]) {
+    result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,1:dim(result_cor_platelet)[2]-1])
+  }
   
   if (type == "all") {
     for (i in 1:nrow(ndata1)) {
@@ -58,15 +82,18 @@ data_correct <- function(data,
       x_eryth <- smpl2$erythrocyte
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
+      Constraint_factor_eryth <- result_cor_erythrocyte[colnames(y),"avg"]
+      Constraint_factor_plate <- result_cor_platelet[colnames(y),"avg"]
+      Constraint_factor_coagu <- result_cor_coagulation[colnames(y),"avg"]
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_plate + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      x_eryth *a[["coefficients"]]["x_eryth","Value"] + 
-                                      x_plate * a[["coefficients"]]["x_plate","Value"] +
-                                      x_coagu *a[["coefficients"]]["x_coagu","Value"] ) + 
+                                      x_eryth *a[["coefficients"]]["x_eryth","Value"]* Constraint_factor_eryth + 
+                                      x_plate * a[["coefficients"]]["x_plate","Value"]* Constraint_factor_plate +
+                                      x_coagu *a[["coefficients"]]["x_coagu","Value"]* Constraint_factor_coagu ) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   }
