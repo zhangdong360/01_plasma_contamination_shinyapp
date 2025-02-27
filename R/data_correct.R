@@ -1,5 +1,5 @@
 data_correct <- function(data, 
-                         type = "all",
+                         type = "all",constraint = 1,
                          erythrocyte_marker,
                          coagulation_marker,
                          platelet_marker) {
@@ -90,10 +90,10 @@ data_correct <- function(data,
         b[i, j - 1] = a$coefficients[j, 1]
       }
       # new residuals:
-      ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      x_eryth *a[["coefficients"]]["x_eryth","Value"]* Constraint_factor_eryth + 
-                                      x_plate * a[["coefficients"]]["x_plate","Value"]* Constraint_factor_plate +
-                                      x_coagu *a[["coefficients"]]["x_coagu","Value"]* Constraint_factor_coagu ) + 
+      ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + constraint * (
+        x_eryth *a[["coefficients"]]["x_eryth","Value"]* Constraint_factor_eryth + 
+          x_plate * a[["coefficients"]]["x_plate","Value"]* Constraint_factor_plate +
+          x_coagu *a[["coefficients"]]["x_coagu","Value"]* Constraint_factor_coagu) ) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   }
@@ -109,7 +109,7 @@ data_correct <- function(data,
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      x_eryth *a[["coefficients"]]["x_eryth","Value"]) + 
+                                      constraint * x_eryth *a[["coefficients"]]["x_eryth","Value"]) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   }
@@ -126,7 +126,7 @@ data_correct <- function(data,
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      x_plate *a[["coefficients"]]["x_plate","Value"]) + 
+                                      constraint * x_plate *a[["coefficients"]]["x_plate","Value"]) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   }
@@ -142,7 +142,7 @@ data_correct <- function(data,
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      x_coagu *a[["coefficients"]]["x_coagu","Value"]) + 
+                                      constraint * x_coagu *a[["coefficients"]]["x_coagu","Value"]) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   }
