@@ -25,6 +25,11 @@ rownames(df) <- df$To  # 将第一列设置为行名
 df <- subset(df,select = -c(From,To))  # 删除第一列
 df
 write.csv(df,file = "../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
+
+df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
 data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 

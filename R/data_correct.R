@@ -1,5 +1,5 @@
 data_correct <- function(data, 
-                         type = "all",constraint = 1,
+                         type = "all",constraint = 1.2,
                          erythrocyte_marker,
                          coagulation_marker,
                          platelet_marker) {

@@ -1,3 +1,8 @@
+# to do list ---- 
+# 1. 将校正后的相关分布叠加矫正前的相关分布
+# 2. 修正矫正函数
+# 3.marker 转为 radio，再比较看 marker 的 CV 值来判断污染
+# 4. 增加enrichment analysis
 library(shiny)
 library(ggplot2)
 library(ggsignif)
@@ -11,6 +16,7 @@ ui <- fluidPage(
   titlePanel("Plasma Protein Contamination Correction and Differential Expression Analysis"),
   tabsetPanel(id = "Step",
               ## Step1 ----
+              # 改为 data input
               tabPanel("Step 1: Data Input",
                        sidebarLayout(
                          sidebarPanel(h3("Step 1: Data Input"),
@@ -43,6 +49,7 @@ ui <- fluidPage(
                          )))
               ),
               ## Step2 ----
+              # 拆分为data evaluation和define markers
               tabPanel("Step 2: Check markers and contamination levels",
                        sidebarLayout(
                          sidebarPanel(sliderInput("cor_cutoff_step2", "Correlation Cutoff",
@@ -111,6 +118,7 @@ ui <- fluidPage(
                          )
                        ),
               ## Step3 ----
+              # correction
               tabPanel("Step 3: Correction Results",
                        sidebarLayout(
                          sidebarPanel(h3("Step 3: Correction Analysis"),
@@ -142,6 +150,7 @@ ui <- fluidPage(
                          )
                        )),
               ## Step4 DE ----
+              # DE & enrichment
               tabPanel("Step 4: Differential Expression",
                        sidebarLayout(
                          sidebarPanel(h3("Step 4: DE Analysis")),
@@ -327,7 +336,7 @@ server <- function(input, output, session) {
     source("./R/data_correct.R")
     showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
     correct_result <- data_correct(data = result_check(), 
-                                   type = input$type,
+                                   type = input$type,constraint= 1.2,
                                    erythrocyte_marker = result_check()$gene$erythrocyte,
                                    coagulation_marker = result_check()$gene$coagulation,
                                    platelet_marker = result_check()$gene$platelet)
