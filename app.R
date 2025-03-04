@@ -122,6 +122,8 @@ ui <- fluidPage(
               tabPanel("Step 3: Correction Results",
                        sidebarLayout(
                          sidebarPanel(h3("Step 3: Correction Analysis"),
+                                      sliderInput("cor_cutoff_step2", "constraint factor",
+                                                  min = 0.5, max = 1.5, value = 1.0, step = 0.01),
                                       actionButton("run_de", "Run Differential Expression Analysis")
                          ),
                          mainPanel(h3("Correction Outcomes"), 
@@ -193,6 +195,9 @@ server <- function(input, output, session) {
   })
   observeEvent(input$cor_cutoff_step2, {
     updateSliderInput(session, "cor_cutoff", value = input$cor_cutoff_step2)
+  })
+  constraint <- reactive({
+    input$constraint
   })
   # 新增反应式值存储用户选择 ----
   selected_markers <- reactiveValues(
@@ -333,10 +338,11 @@ server <- function(input, output, session) {
   ## 数据校正 ----
   observeEvent(input$run_correct, {
     req(result_check())
+    req(constraint())
     source("./R/data_correct.R")
     showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
     correct_result <- data_correct(data = result_check(), 
-                                   type = input$type,constraint= 1.2,
+                                   type = input$type,constraint= input$constraint,
                                    erythrocyte_marker = result_check()$gene$erythrocyte,
                                    coagulation_marker = result_check()$gene$coagulation,
                                    platelet_marker = result_check()$gene$platelet)
