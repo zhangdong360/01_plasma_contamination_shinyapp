@@ -52,13 +52,21 @@ ui <- fluidPage(
               # 拆分为data evaluation和define markers
               tabPanel("Step 2: Check markers and contamination levels",
                        sidebarLayout(
-                         sidebarPanel(sliderInput("cor_cutoff_step2", "Correlation Cutoff",
-                                                   min = 0.5, max = 0.99, value = 0.9, step = 0.01),
-                                      actionButton("rerun_check_step2", "Re-run Data Check"),
-                                      h3("Step 2: Contamination Assessment"),
-                                      selectInput("type", "Correction Type",
-                                                  choices = c("all", "erythrocyte", "platelet", "coagulation")),
-                                      actionButton("run_correct", "Run Correction")
+                         sidebarPanel(
+                           sliderInput("cor_cutoff_step2", "Correlation Cutoff",
+                                       min = 0.5, max = 0.99, value = 0.9, step = 0.01),
+                           actionButton("rerun_check_step2", "Re-run Data Check"),
+                           h3("Step 2: Contamination Assessment"),
+                           selectInput("type", "Correction Type",
+                                       choices = c("all", "erythrocyte", "platelet", "coagulation")),
+                           # 添加高级选项
+                           checkboxInput("show_advanced", "Show Advanced Options", value = FALSE),
+                           conditionalPanel(
+                             condition = "input.show_advanced",
+                             sliderInput("constraint_factor", "Constraint Factor",
+                                         min = 0.5, max = 1.5, value = 1.0, step = 0.01)
+                           ),
+                           actionButton("run_correct", "Run Correction")
                          ),
                          mainPanel(h3("Data Quality Assessment"),
                                    h4("Missing Markers"),
@@ -197,7 +205,8 @@ server <- function(input, output, session) {
     updateSliderInput(session, "cor_cutoff", value = input$cor_cutoff_step2)
   })
   constraint_factor <- reactive({
-    input$constraint_factor
+    # 当输入不存在时使用默认值1.0
+    if (is.null(input$constraint_factor)) 1.0 else input$constraint_factor
   })
   # 新增反应式值存储用户选择 ----
   selected_markers <- reactiveValues(
@@ -338,11 +347,11 @@ server <- function(input, output, session) {
   ## 数据校正 ----
   observeEvent(input$run_correct, {
     req(result_check())
-    req(constraint())
-    source("./R/data_correct.R")
+    req(constraint_factor())  # 确保值存在
+    source("./R/data_correct.R",local = TRUE)
     showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
     correct_result <- data_correct(data = result_check(), 
-                                   type = input$type,constraint= input$constraint,
+                                   type = input$type,constraint= constraint_factor(),
                                    erythrocyte_marker = result_check()$gene$erythrocyte,
                                    coagulation_marker = result_check()$gene$coagulation,
                                    platelet_marker = result_check()$gene$platelet)

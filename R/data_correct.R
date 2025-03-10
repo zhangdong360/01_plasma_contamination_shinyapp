@@ -60,19 +60,22 @@ data_correct <- function(data,
   result_cor_erythrocyte$avg <- NA
   result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
   for (i in 1:dim(result_cor_erythrocyte)[1]) {
-    result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,1:dim(result_cor_erythrocyte)[2]-1])
+    result_cor_erythrocyte <- result_cor_erythrocyte[,order(result_cor_erythrocyte[i,])]
+    result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,round(dim(result_cor_erythrocyte)[2]*percentage_erythrocyte):dim(result_cor_erythrocyte)[2]-1])
   }
   
   result_cor_coagulation$avg <- NA
   result_cor_coagulation <- as.matrix(result_cor_coagulation)
   for (i in 1:dim(result_cor_coagulation)[1]) {
-    result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,1:dim(result_cor_coagulation)[2]-1])
+    result_cor_coagulation <- result_cor_coagulation[,order(result_cor_coagulation[i,])]
+    result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,round(dim(result_cor_coagulation)[2]*percentage_coagulation):dim(result_cor_coagulation)[2]-1])
   }
   
   result_cor_platelet$avg <- NA
   result_cor_platelet <- as.matrix(result_cor_platelet)
   for (i in 1:dim(result_cor_platelet)[1]) {
-    result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,1:dim(result_cor_platelet)[2]-1])
+    result_cor_platelet <- result_cor_platelet[,order(result_cor_platelet[i,])]
+    result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,round(dim(result_cor_platelet)[2]*percentage_platelet):dim(result_cor_platelet)[2]-1])
   }
   
   if (type == "all") {
