@@ -122,7 +122,7 @@ ui <- fluidPage(
               tabPanel("Step 3: Correction Results",
                        sidebarLayout(
                          sidebarPanel(h3("Step 3: Correction Analysis"),
-                                      sliderInput("cor_cutoff_step2", "constraint factor",
+                                      sliderInput("constraint_factor", "constraint factor",
                                                   min = 0.5, max = 1.5, value = 1.0, step = 0.01),
                                       actionButton("run_de", "Run Differential Expression Analysis")
                          ),
@@ -196,8 +196,8 @@ server <- function(input, output, session) {
   observeEvent(input$cor_cutoff_step2, {
     updateSliderInput(session, "cor_cutoff", value = input$cor_cutoff_step2)
   })
-  constraint <- reactive({
-    input$constraint
+  constraint_factor <- reactive({
+    input$constraint_factor
   })
   # 新增反应式值存储用户选择 ----
   selected_markers <- reactiveValues(
