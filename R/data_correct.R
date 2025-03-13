@@ -1,12 +1,22 @@
 data_correct <- function(data, 
                          type = "all",constraint = 1.2,
-                         erythrocyte_marker,
-                         coagulation_marker,
-                         platelet_marker) {
+                         erythrocyte_marker,constraint_erythrocyte = 0,
+                         coagulation_marker,constraint_coagulation = 0,
+                         platelet_marker,constraint_platelet = 0) {
   # 函数说明 ----
   # data为输入数据，type为矫正类型，默认为"all"，表示矫正所有污染类型
   # type可以为erythrocyte，coagulation，platelet中任意几种
-  
+  # 强制参数在(0,1)范围内（包含边界检查）
+  constraint_erythrocyte_original <- max(0, min(1, constraint_erythrocyte))
+  constraint_platelet_original <- max(0, min(1, constraint_platelet))
+  constraint_coagulation_original <- max(0, min(1, constraint_coagulation)) 
+  # 当参数被修正时发出警告
+  if(constraint_erythrocyte != constraint_erythrocyte_original) 
+    warning("constraint_erythrocyte clamped to [0,1]")
+  if(constraint_platelet != constraint_platelet_original) 
+    warning("constraint_platelet clamped to [0,1]")
+  if(constraint_coagulation != constraint_coagulation_original) 
+    warning("constraint_coagulation clamped to [0,1]")
   library(MASS)
   # 定义计算均值的函数
   
@@ -15,29 +25,35 @@ data_correct <- function(data,
       # 标准化数据
       data <- log2(data + 1)
       M <- as.data.frame(t(data))
-      a <- M
-      for (i in 1:nrow(M)) {
-        for (j in 1:ncol(M)) {
-          a[i, j] <- M[i, j] - mean(as.numeric(M[i, ]), na.rm = TRUE)
-        }
-      }
+      a <- as.matrix(M)
+      a <- M - rowMeans(M)
       mean <- sapply(a, mean, na.rm = TRUE)
       return(mean)
     }
     # 增加检测data$data$erythrocyte是否为NULL
+    # erythrocyte_df
+    erythrocyte_df <- data.frame(data$data$erythrocyte)
+    rownames(erythrocyte_df) <- erythrocyte_df$id
+    # platelet_df
+    platelet_df <- data.frame(data$data$platelet)
+    rownames(platelet_df) <- platelet_df$id
+    # coagulation_df
+    coagulation_df <- data.frame(data$data$coagulation)
+    rownames(coagulation_df) <- coagulation_df$id
+    
     rownames(data$data$erythrocyte) <- data$data$erythrocyte$id
     rownames(data$data$coagulation) <- data$data$coagulation$id
     rownames(data$data$platelet) <- data$data$platelet$id
     
     # 计算污染水平
-    list1 <- for_mean(data$data$erythrocyte[, colnames(data$data$erythrocyte) %in% erythrocyte_marker])
-    list2 <- for_mean(data$data$platelet[, colnames(data$data$platelet) %in% platelet_marker])
-    list3 <- for_mean(data$data$coagulation[, colnames(data$data$coagulation) %in% coagulation_marker])
+    list_erythrocyte <- for_mean(erythrocyte_df[, colnames(erythrocyte_df) %in% erythrocyte_marker])
+    list_platelet <- for_mean(platelet_df[, colnames(platelet_df) %in% platelet_marker])
+    list_coagulation <- for_mean(coagulation_df[, colnames(coagulation_df) %in% coagulation_marker])
     
     smpl2 <- data.frame(
-      erythrocyte = list1,
-      Platelet = list2,
-      coagulation = list3
+      erythrocyte = list_erythrocyte,
+      Platelet = list_platelet,
+      coagulation = list_coagulation
     )
     return(smpl2)
   }
@@ -61,21 +77,25 @@ data_correct <- function(data,
   result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
   for (i in 1:dim(result_cor_erythrocyte)[1]) {
     result_cor_erythrocyte <- result_cor_erythrocyte[,order(result_cor_erythrocyte[i,])]
-    result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,round(dim(result_cor_erythrocyte)[2]*percentage_erythrocyte):dim(result_cor_erythrocyte)[2]-1])
+    start_col_erythrocyte <- min(max(round(dim(result_cor_erythrocyte)[2]*constraint_erythrocyte_original),1),dim(result_cor_erythrocyte)[2]-2)
+    result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,start_col_erythrocyte:dim(result_cor_erythrocyte)[2]-1])
   }
   
   result_cor_coagulation$avg <- NA
   result_cor_coagulation <- as.matrix(result_cor_coagulation)
   for (i in 1:dim(result_cor_coagulation)[1]) {
     result_cor_coagulation <- result_cor_coagulation[,order(result_cor_coagulation[i,])]
-    result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,round(dim(result_cor_coagulation)[2]*percentage_coagulation):dim(result_cor_coagulation)[2]-1])
+    start_col_coagulation <- min(max(round(dim(result_cor_coagulation)[2]*constraint_coagulation_original),1),
+                                 dim(result_cor_coagulation)[2]-2)
+    result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,start_col_coagulation:dim(result_cor_coagulation)[2]-1])
   }
   
   result_cor_platelet$avg <- NA
   result_cor_platelet <- as.matrix(result_cor_platelet)
   for (i in 1:dim(result_cor_platelet)[1]) {
     result_cor_platelet <- result_cor_platelet[,order(result_cor_platelet[i,])]
-    result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,round(dim(result_cor_platelet)[2]*percentage_platelet):dim(result_cor_platelet)[2]-1])
+    start_col_platelet <- min(max(round(dim(result_cor_platelet)[2]*constraint_platelet_original),1),dim(result_cor_platelet)[2]-2)
+    result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,start_col_platelet:dim(result_cor_platelet)[2]-1])
   }
   
   if (type == "all") {
@@ -102,7 +122,6 @@ data_correct <- function(data,
   }
   if (type == "erythrocyte") {
     for (i in 1:nrow(ndata1)) {
-      library(MASS)
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
       x_eryth <- smpl2$erythrocyte
@@ -118,7 +137,6 @@ data_correct <- function(data,
   }
   if (type == "platelet") {
     for (i in 1:nrow(ndata1)) {
-      library(MASS)
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
       x_plate <- smpl2$Platelet
@@ -135,7 +153,6 @@ data_correct <- function(data,
   }
   if (type == "coagulation") {
     for (i in 1:nrow(ndata1)) {
-      library(MASS)
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
       x_coagu <- smpl2$coagulation
