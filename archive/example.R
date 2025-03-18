@@ -13,18 +13,18 @@ df
 data_group <- read.csv("./tests/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # cov
-df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/Plasma_matrix_after_seqknn.csv")
-colnames(df)[1] <- "From"
-library(readr)
-gene_name <- read_delim("../01_plasma_contamination/01_rawdata/data_COVID_19/idmapping_2025_02_26.tsv", 
-                           delim = "\t", escape_double = FALSE, 
-                           trim_ws = TRUE)
-gene_name <- as.data.frame(gene_name)
-df <- merge(gene_name,df, by = "From")
-rownames(df) <- df$To  # 将第一列设置为行名
-df <- subset(df,select = -c(From,To))  # 删除第一列
-df
-write.csv(df,file = "../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
+# df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/Plasma_matrix_after_seqknn.csv")
+# colnames(df)[1] <- "From"
+# library(readr)
+# gene_name <- read_delim("../01_plasma_contamination/01_rawdata/data_COVID_19/idmapping_2025_02_26.tsv", 
+#                            delim = "\t", escape_double = FALSE, 
+#                            trim_ws = TRUE)
+# gene_name <- as.data.frame(gene_name)
+# df <- merge(gene_name,df, by = "From")
+# rownames(df) <- df$To  # 将第一列设置为行名
+# df <- subset(df,select = -c(From,To))  # 删除第一列
+# df
+# write.csv(df,file = "../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
 
 df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
 rownames(df) <- df[, 1]  # 将第一列设置为行名
@@ -33,7 +33,50 @@ df
 data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 
-result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
+result_check <- data_check(data = df,data_group = data_group,cutoff = 0.5)
+# CV ----
+result_cv_coa <- get_cv(raw_data = result_check$rawdata,
+                        protein = result_check$marker_list$coagulation)
+result_cv_ery <- get_cv(raw_data = result_check$rawdata,
+                        protein = result_check$marker_list$erythrocyte)
+result_cv_pla <- get_cv(raw_data = result_check$rawdata,
+                        protein = result_check$marker_list$platelet)
+result_cv_other <- get_cv(raw_data =  result_check$rawdata[!rownames(result_check$rawdata)%in%
+                                                     c(result_check$marker_list$coagulation,
+                                                       result_check$marker_list$erythrocyte,
+                                                       result_check$marker_list$platelet),])
+result_cv_coa$type <- "coagulation"
+result_cv_ery$type <- "erythrocyte"
+result_cv_pla$type <- "platelet"
+result_cv_other$type <- "other protein"
+result_cv <- rbind(result_cv_coa,result_cv_ery,
+                   result_cv_pla,result_cv_other)
+result_cv$type <- factor(result_cv$type,
+                         levels = c("coagulation",
+                                    "erythrocyte",
+                                    "platelet",
+                                    "other protein"))
+
+ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
+  geom_violin() +
+  geom_boxplot(fill = "white",width = 0.2) +
+  scale_fill_manual(values = c("coagulation" = "#E64B35FF",
+                               "erythrocyte" = "#F39B7FFF",
+                               "platelet" = "#7E6148FF",
+                               "other protein" = "#3C5488FF")) +
+  stat_compare_means(comparisons = list(c("other protein","coagulation"),
+                                        c("other protein","erythrocyte"),
+                                        c("other protein","platelet"))) + 
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 15),
+        axis.title.x = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13))
+# cor ----
+
+
 result_check$data
 result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(result_check$rawdata)), type = "pearson")
 result_cor <- as.data.frame(result_cor$r)
