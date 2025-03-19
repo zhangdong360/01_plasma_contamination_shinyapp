@@ -598,7 +598,7 @@ server <- function(input, output, session) {
     # 绘制主图
     p <- ggplot(result_cv, aes(x = type, y = CV, fill = type)) +
       geom_violin() +
-      geom_boxplot(fill = "white", width = 0.2) +
+      geom_boxplot(fill = "white", width = 0.15) +
       scale_fill_manual(values = color_values) +
       theme_classic() +
       theme(
@@ -615,7 +615,7 @@ server <- function(input, output, session) {
       p <- p + stat_compare_means(
         comparisons = comparisons,
         method = "t.test",
-        label = "p.signif",
+        label = "p.format",
         hide.ns = TRUE
       )
     }
@@ -626,42 +626,111 @@ server <- function(input, output, session) {
     source("./R/modules/get_cv.R")
     req(result_correct())
     data <- result_correct()
-    result_cv_coa <- get_cv(raw_data = data$correct_data,protein = data$marker_list$coagulation)
-    result_cv_ery <- get_cv(raw_data = data$correct_data,protein = data$marker_list$erythrocyte)
-    result_cv_pla <- get_cv(raw_data = data$correct_data,protein = data$marker_list$platelet)
-    result_cv_other <- get_cv(raw_data =  data$correct_data[!rownames(data$correct_data)%in%
-                                                              c(data$marker_list$coagulation,
-                                                                data$marker_list$erythrocyte,
-                                                                data$marker_list$platelet),])
-    result_cv_coa$type <- "coagulation"
-    result_cv_ery$type <- "erythrocyte"
-    result_cv_pla$type <- "platelet"
-    result_cv_other$type <- "other protein"
-    result_cv <- rbind(result_cv_coa,result_cv_ery,result_cv_pla,result_cv_other)
-    result_cv$type <- factor(result_cv$type,
-                             levels = c("coagulation",
-                                        "erythrocyte",
-                                        "platelet",
-                                        "other protein"))
+    # 获取各个marker列表
+    marker_coagulation <- data$marker_list$coagulation
+    marker_erythrocyte <- data$marker_list$erythrocyte
+    marker_platelet <- data$marker_list$platelet
     
-    ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
-      geom_violin() +
-      geom_boxplot(fill = "white",width = 0.2) +
-      scale_fill_manual(values = c("coagulation" = "#E64B35FF",
-                                   "erythrocyte" = "#F39B7FFF",
-                                   "platelet" = "#7E6148FF",
-                                   "other protein" = "#3C5488FF")) +
-      stat_compare_means(comparisons = list(c("other protein","coagulation"),
-                                            c("other protein","erythrocyte"),
-                                            c("other protein","platelet"))) + 
-      theme_classic() +
-      theme(axis.text.x = element_blank(),
-            axis.text.y = element_text(size = 13),
-            axis.title.y = element_text(size = 15),
-            axis.title.x = element_text(size = 15),
-            legend.title = element_text(size = 15),
-            legend.text = element_text(size = 13))
-  },height = 400,width = 500)
+    # 初始化存储各类型CV数据的列表
+    cv_list <- list()
+    
+    # 处理每个marker类型，仅当存在时计算CV
+    if (length(marker_coagulation) > 0) {
+      result_cv_coa <- get_cv(raw_data = data$correct_data, protein = marker_coagulation)
+      result_cv_coa$type <- "coagulation"
+      cv_list <- c(cv_list, list(result_cv_coa))
+    } else {
+      showNotification("Post-correction: Coagulation markers are empty.", type = "warning")
+    }
+    
+    if (length(marker_erythrocyte) > 0) {
+      result_cv_ery <- get_cv(raw_data = data$correct_data, protein = marker_erythrocyte)
+      result_cv_ery$type <- "erythrocyte"
+      cv_list <- c(cv_list, list(result_cv_ery))
+    } else {
+      showNotification("Post-correction: Erythrocyte markers are empty.", type = "warning")
+    }
+    
+    if (length(marker_platelet) > 0) {
+      result_cv_pla <- get_cv(raw_data = data$correct_data, protein = marker_platelet)
+      result_cv_pla$type <- "platelet"
+      cv_list <- c(cv_list, list(result_cv_pla))
+    } else {
+      showNotification("Post-correction: Platelet markers are empty.", type = "warning")
+    }
+    
+    # 处理other protein类型（动态排除所有有效marker）
+    all_markers <- c(marker_coagulation, marker_erythrocyte, marker_platelet)
+    other_proteins <- data$correct_data[!rownames(data$correct_data) %in% all_markers, ]
+    
+    if (nrow(other_proteins) > 0) {
+      result_cv_other <- get_cv(raw_data = other_proteins)
+      result_cv_other$type <- "other protein"
+      cv_list <- c(cv_list, list(result_cv_other))
+    } else {
+      showNotification("Post-correction: No other proteins available.", type = "warning")
+    }
+    
+    # 合并所有数据（自动跳过空元素）
+    result_cv <- do.call(rbind, cv_list)
+    
+    # 无数据时返回空白图
+    if (is.null(result_cv) || nrow(result_cv) == 0) {
+      return(ggplot() + 
+               geom_blank() + 
+               labs(title = "No data available for CV analysis (Post-correction)") +
+               theme_classic())
+    }
+    
+    # 动态设置因子水平
+    existing_types <- unique(result_cv$type)
+    type_levels <- c("coagulation", "erythrocyte", "platelet", "other protein")
+    existing_levels <- intersect(type_levels, existing_types)
+    result_cv$type <- factor(result_cv$type, levels = existing_levels)
+    
+    # 生成动态比较对
+    comparisons <- list()
+    if ("other protein" %in% existing_levels) {
+      for (t in setdiff(existing_levels, "other protein")) {
+        comparisons <- c(comparisons, list(c("other protein", t)))
+      }
+    }
+    
+    # 动态颜色映射
+    color_values <- c(
+      "coagulation" = "#E64B35FF",
+      "erythrocyte" = "#F39B7FFF",
+      "platelet" = "#7E6148FF",
+      "other protein" = "#3C5488FF"
+    )[existing_levels]
+    
+    # 绘制主图
+    p <- ggplot(result_cv, aes(x = type, y = CV, fill = type)) +
+      geom_violin(trim = FALSE) +
+      geom_boxplot(fill = "white",width = 0.15) +
+      scale_fill_manual(values = color_values) +
+      labs(y = "Coefficient of Variation", x = "") +
+      theme_minimal(base_size = 14) +
+      theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "right",
+        panel.grid.major.x = element_blank()
+      )
+    
+    # 智能添加统计标注
+    if (length(comparisons) > 0) {
+      p <- p + ggpubr::stat_compare_means(
+        comparisons = comparisons,
+        method = "wilcox.test",
+        label = "p.format",
+        tip.length = 0.01,
+        step.increase = 0.1
+      )
+    }
+    
+    p
+  }, height = 400, width = 500)
   ### erythrocyte ----
   
   output$contamination_erythrocyte_plot <- renderPlot({
