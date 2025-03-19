@@ -100,9 +100,9 @@ data_check <- function(data, data_group, cutoff = 0.9,
     stat_results <- subset(stat_results,select = c(p))
     # 计算统计信息
     stats <- data.frame(key = target_proteins,
-                        exists = target_proteins%in%unique(data_filtered$key),
-                        DE = ifelse(target_proteins%in%analyze_markers_result$keys_with_high_pvalue,FALSE,TRUE),
-                        correlation = ifelse(target_proteins%in%correlation_result$high_corr_keys,FALSE,TRUE))
+                        exists = ifelse(target_proteins%in%unique(data_filtered$key),"Pass","NA"),
+                        DE = ifelse(target_proteins%in%analyze_markers_result$keys_with_high_pvalue,"Pass","Non-removable inter-sample heterogeneity"),
+                        correlation = ifelse(target_proteins%in%correlation_result$high_corr_keys,"Pass","Low statistical correlation"))
     stats[stats$exists%in% FALSE,"DE"] <- NA
     stats[stats$exists%in% FALSE,"correlation"] <- NA
     return(stats)
