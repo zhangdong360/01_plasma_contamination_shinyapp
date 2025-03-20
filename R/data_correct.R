@@ -1,8 +1,8 @@
 data_correct <- function(data, 
                          type = "all",constraint = 1.2,
-                         erythrocyte_marker,constraint_erythrocyte = 0,
-                         coagulation_marker,constraint_coagulation = 0,
-                         platelet_marker,constraint_platelet = 0) {
+                         erythrocyte_marker,constraint_erythrocyte = 0.95,
+                         coagulation_marker,constraint_coagulation = 0.95,
+                         platelet_marker,constraint_platelet = 0.95) {
   # 函数说明 ----
   # data为输入数据，type为矫正类型，默认为"all"，表示矫正所有污染类型
   # type可以为erythrocyte，coagulation，platelet中任意几种
@@ -18,6 +18,34 @@ data_correct <- function(data,
   if(constraint_coagulation != constraint_coagulation_original) 
     warning("constraint_coagulation clamped to [0,1]")
   library(MASS)
+  # 检查必要的marker参数是否为空
+  if ("all" %in% type) {
+    if (missing(erythrocyte_marker) || is.null(erythrocyte_marker) || length(erythrocyte_marker) == 0) {
+      stop("当type为'all'时，参数erythrocyte_marker不能为空")
+    }
+    if (missing(coagulation_marker) || is.null(coagulation_marker) || length(coagulation_marker) == 0) {
+      stop("当type为'all'时，参数coagulation_marker不能为空")
+    }
+    if (missing(platelet_marker) || is.null(platelet_marker) || length(platelet_marker) == 0) {
+      stop("当type为'all'时，参数platelet_marker不能为空")
+    }
+  } else {
+    for (t in type) {
+      if (t == "erythrocyte") {
+        if (missing(erythrocyte_marker) || is.null(erythrocyte_marker) || length(erythrocyte_marker) == 0) {
+          stop("当type包含'erythrocyte'时，参数erythrocyte_marker不能为空")
+        }
+      } else if (t == "coagulation") {
+        if (missing(coagulation_marker) || is.null(coagulation_marker) || length(coagulation_marker) == 0) {
+          stop("当type包含'coagulation'时，参数coagulation_marker不能为空")
+        }
+      } else if (t == "platelet") {
+        if (missing(platelet_marker) || is.null(platelet_marker) || length(platelet_marker) == 0) {
+          stop("当type包含'platelet'时，参数platelet_marker不能为空")
+        }
+      }
+    }
+  }
   # 定义计算均值的函数
   
   mean_2 <- function(data) {

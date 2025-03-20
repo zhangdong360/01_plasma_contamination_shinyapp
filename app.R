@@ -69,8 +69,8 @@ ui <- fluidPage(
                            actionButton("run_correct", "Run Correction")
                          ),
                          mainPanel(h3("Data Quality Assessment"),
-                                   h4("Missing Markers"),
-                                   verbatimTextOutput("missing_genes"),
+                                   h4("Contamination Summary"),
+                                   verbatimTextOutput("contamination_summary"),
                                    tabsetPanel(
                                      tabPanel("Erythrocyte", DTOutput("erythrocyte_marker_table")),
                                      tabPanel("Coagulation", DTOutput("coagulation_marker_table")),
@@ -498,15 +498,47 @@ server <- function(input, output, session) {
     req(result_check())
     datatable(result_check()$correlation$platelet$r, options = list(pageLength = 10))  # 每页显示 10 行
   })
-  ## 显示缺失基因（修改） ----
-  output$missing_genes <- renderPrint({
+  ## 显示缺失基因 ----
+  output$contamination_summary <- renderPrint({
     req(result_check())
-    cat("红系marker缺失基因:\n")
-    print(result_check()$missing_genes$missing_erythrocyte_genes)
-    cat("凝血marker缺失基因:\n")
-    print(result_check()$missing_genes$missing_coagulation_genes)
-    cat("血小板marker缺失基因:\n")
-    print(result_check()$missing_genes$missing_platelet_genes)
+    
+    # 获取各个污染面板的统计数据和可用marker列表
+    stats_ery <- result_check()$marker_stats$stats_erythrocyte
+    stats_coa <- result_check()$marker_stats$stats_coagulation
+    stats_plt <- result_check()$marker_stats$stats_platelet
+    marker_list <- result_check()$marker_list
+    
+    # 计算统计信息的函数
+    calculate_stats <- function(stats, panel) {
+      total <- nrow(stats)
+      missing_pct <- sum(stats$exists == "NA") / total * 100
+      
+      exists_count <- sum(stats$exists == "Pass")
+      de_pct <- ifelse(exists_count > 0,
+                       sum(stats$DE == "Non-removable inter-sample heterogeneity" & stats$exists == "Pass", na.rm = TRUE) / exists_count * 100,
+                       0)
+      cor_pct <- ifelse(exists_count > 0,
+                        sum(stats$correlation == "Low statistical correlation" & stats$exists == "Pass", na.rm = TRUE) / exists_count * 100,
+                        0)
+      
+      available <- marker_list[[panel]]
+      available_text <- if (length(available) > 0) {
+        paste("Available markers:", paste(available, collapse = ", "))
+      } else {
+        "No available markers; no significant contamination detected, correction not required."
+      }
+      
+      sprintf("In %s contamination: %.1f%% missing, %.1f%% non-removable biological variation, %.1f%% low correlation. %s",
+              panel, missing_pct, de_pct, cor_pct, available_text)
+    }
+    
+    # 生成各面板报告
+    ery_report <- calculate_stats(stats_ery, "erythrocyte")
+    coa_report <- calculate_stats(stats_coa, "coagulation")
+    plt_report <- calculate_stats(stats_plt, "platelet")
+    
+    # 组合输出
+    cat(paste(ery_report, coa_report, plt_report, sep = "\n\n"))
   })
   
   ## 显示污染水平可视化 ----
