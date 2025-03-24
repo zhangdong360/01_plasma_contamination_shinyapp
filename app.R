@@ -57,17 +57,14 @@ ui <- fluidPage(
                                        min = 0.5, max = 0.99, value = 0.9, step = 0.01),
                            actionButton("rerun_check_step2", "Re-run Data Check"),
                            h3("Step 2: Contamination Assessment"),
-                           selectInput("type", "Correction Type",
-                                       choices = c("all", "erythrocyte", "platelet", "coagulation")),
-                           # 添加高级选项
-                           checkboxInput("show_advanced", "Show Advanced Options", value = FALSE),
-                           conditionalPanel(
-                             condition = "input.show_advanced",
-                             sliderInput("constraint_factor", "Constraint Factor",
-                                         min = 0.5, max = 1.5, value = 1.0, step = 0.01)
-                           ),
-                           actionButton("run_correct", "Run Correction")
-                         ),
+                           # 修改后的单选按钮组
+                           tags$div(class = "form-group",
+                                    tags$label(class = "control-label", "Correction Type"),
+                                    checkboxInput("type_all", "All", value = FALSE),
+                                    checkboxInput("type_erythrocyte", "Erythrocyte", value = FALSE),
+                                    checkboxInput("type_platelet", "Platelet", value = FALSE),
+                                    checkboxInput("type_coagulation", "Coagulation", value = FALSE)),
+                           actionButton("run_correct", "Run Correction")),
                          mainPanel(h3("Data Quality Assessment"),
                                    h4("Contamination Summary"),
                                    verbatimTextOutput("contamination_summary"),
@@ -187,12 +184,13 @@ ui <- fluidPage(
 
 # 定义 Server 逻辑 ----
 server <- function(input, output, session) {
-  ## 初始化 reactive values ----
+  ## 数据输入 ----
+  ### 初始化 reactive values ----
   result_check <- reactiveVal()
   result_correct <- reactiveVal()
   result_de_pre <- reactiveVal()
   result_de_post <- reactiveVal()
-  ## cor_cutoff响应值 ----
+  ### cor_cutoff响应值 ----
   # 新增cor_cutoff响应式值
   cor_cutoff <- reactive({
     input$cor_cutoff
@@ -208,13 +206,13 @@ server <- function(input, output, session) {
     # 当输入不存在时使用默认值1.0
     if (is.null(input$constraint_factor)) 1.0 else input$constraint_factor
   })
-  # 新增反应式值存储用户选择 ----
+  ### 新增反应式值存储用户选择 ----
   selected_markers <- reactiveValues(
     erythrocyte = NULL,
     coagulation = NULL,
     platelet = NULL
   )
-  # 渲染marker表格 ----
+  ### 渲染marker表格 ----
   output$erythrocyte_marker_table <- renderDT({
     req(result_check())
     df <- result_check()$marker_stats$stats_erythrocyte
@@ -234,7 +232,7 @@ server <- function(input, output, session) {
     datatable(df, selection = list(mode = 'multiple'), 
               options = list(pageLength = 5))
   })
-  # 获取用户选择 ----
+  ### 获取用户选择 ----
   observe({
     req(result_check())
     
@@ -345,13 +343,53 @@ server <- function(input, output, session) {
     run_data_check()
   })
   ## 数据校正 ----
+  ### 处理校正类型选择逻辑 ----
+  # 当选择"All"时自动选中其他三个
+  observeEvent(input$type_all, {
+    if (input$type_all) {
+      updateCheckboxInput(session, "type_erythrocyte", value = TRUE)
+      updateCheckboxInput(session, "type_platelet", value = TRUE)
+      updateCheckboxInput(session, "type_coagulation", value = TRUE)
+    }
+  })
+  
+  # 当三个子项全选时自动选中"All"
+  observe({
+    all_selected <- all(
+      input$type_erythrocyte,
+      input$type_platelet,
+      input$type_coagulation
+    )
+    updateCheckboxInput(session, "type_all", value = all_selected)
+  })
+  
+  # 获取最终选择的校正类型
+  selected_types <- reactive({
+    types <- c()
+    if (input$type_erythrocyte) types <- c(types, "erythrocyte")
+    if (input$type_platelet) types <- c(types, "platelet")
+    if (input$type_coagulation) types <- c(types, "coagulation")
+    types
+  })
+  
+  ### 矫正 ----
   observeEvent(input$run_correct, {
     req(result_check())
     req(constraint_factor())  # 确保值存在
+    
     source("./R/data_correct.R",local = TRUE)
     showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
+    # 根据选择的类型动态设置参数
+    correction_type <- selected_types()
+    
+    # 确保至少选择一个类型
+    if (length(correction_type) == 0) {
+      showNotification("Please select at least one correction type!", type = "error")
+      return()
+    }
+    # 调用矫正函数
     correct_result <- data_correct(data = result_check(), 
-                                   type = input$type,constraint= constraint_factor(),
+                                   type = selected_types(),constraint= constraint_factor(),
                                    erythrocyte_marker = result_check()$gene$erythrocyte,
                                    coagulation_marker = result_check()$gene$coagulation,
                                    platelet_marker = result_check()$gene$platelet)
