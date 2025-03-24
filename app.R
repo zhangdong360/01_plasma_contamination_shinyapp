@@ -390,9 +390,9 @@ server <- function(input, output, session) {
     # 调用矫正函数
     correct_result <- data_correct(data = result_check(), 
                                    type = selected_types(),constraint= constraint_factor(),
-                                   erythrocyte_marker = result_check()$gene$erythrocyte,
-                                   coagulation_marker = result_check()$gene$coagulation,
-                                   platelet_marker = result_check()$gene$platelet)
+                                   erythrocyte_marker = result_check()$marker_list$erythrocyte,
+                                   coagulation_marker = result_check()$marker_list$coagulation,
+                                   platelet_marker = result_check()$marker_list$platelet)
     result_correct(correct_result)
     removeModal()
     updateTabsetPanel(session, "Step", selected = "Step 3: Correction Results")

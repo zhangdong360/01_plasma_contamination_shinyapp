@@ -1,5 +1,5 @@
 data_correct <- function(data, 
-                         type = "all",constraint = 1.2,
+                         type = "all",constraint = 1,
                          erythrocyte_marker,constraint_erythrocyte = 0.95,
                          coagulation_marker,constraint_coagulation = 0.95,
                          platelet_marker,constraint_platelet = 0.95) {
@@ -22,33 +22,20 @@ data_correct <- function(data,
   # 定义计算均值的函数
   mean_2 <- function(data) {
     for_mean <- function(data) {
-      # 标准化数据
+      # 标准化数据（不再需要转置）
       data <- log2(data + 1)
-      M <- as.data.frame(t(data))
-      a <- as.matrix(M)
+      # 直接使用原始基因 × 样本的结构
+      M <- as.data.frame(data)
+      # 计算行（基因）均值并中心化
       a <- M - rowMeans(M)
-      mean <- sapply(a, mean, na.rm = TRUE)
+      # 对列（样本）取均值
+      mean <- apply(a,2, mean, na.rm = TRUE)
       return(mean)
     }
-    # 增加检测data$data$erythrocyte是否为NULL
-    # erythrocyte_df
-    erythrocyte_df <- data.frame(data$data$erythrocyte)
-    rownames(erythrocyte_df) <- erythrocyte_df$id
-    # platelet_df
-    platelet_df <- data.frame(data$data$platelet)
-    rownames(platelet_df) <- platelet_df$id
-    # coagulation_df
-    coagulation_df <- data.frame(data$data$coagulation)
-    rownames(coagulation_df) <- coagulation_df$id
-    
-    rownames(data$data$erythrocyte) <- data$data$erythrocyte$id
-    rownames(data$data$coagulation) <- data$data$coagulation$id
-    rownames(data$data$platelet) <- data$data$platelet$id
-    
     # 计算污染水平
-    list_erythrocyte <- for_mean(erythrocyte_df[, colnames(erythrocyte_df) %in% erythrocyte_marker])
-    list_platelet <- for_mean(platelet_df[, colnames(platelet_df) %in% platelet_marker])
-    list_coagulation <- for_mean(coagulation_df[, colnames(coagulation_df) %in% coagulation_marker])
+    list_erythrocyte <- for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,])
+    list_platelet <- for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,])
+    list_coagulation <- for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,])
     
     smpl2 <- data.frame(
       erythrocyte = list_erythrocyte,
@@ -69,8 +56,12 @@ data_correct <- function(data,
   # 计算约束系数 ----
   result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(data$rawdata)), type = "pearson")
   result_cor <- as.data.frame(result_cor$r)
+  # 初始化约束因子为 NULL
+  result_cor_erythrocyte <- result_cor_platelet <- result_cor_coagulation <- NULL
+  # 动态计算各类型约束因子
   ## ery ----
-  if(!is.null(data$marker_list$erythrocyte)){
+  if (!is.null(erythrocyte_marker) && length(erythrocyte_marker) > 0) {
+    result_cor_erythrocyte <- abs(result_cor[, colnames(result_cor) %in% erythrocyte_marker, drop = FALSE])
     result_cor_erythrocyte <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$erythrocyte)])
     result_cor_erythrocyte$avg <- NA
     result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
@@ -78,12 +69,11 @@ data_correct <- function(data,
       result_cor_erythrocyte <- result_cor_erythrocyte[,order(result_cor_erythrocyte[i,])]
       start_col_erythrocyte <- min(max(round(dim(result_cor_erythrocyte)[2]*constraint_erythrocyte_original),1),dim(result_cor_erythrocyte)[2]-2)
       result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,start_col_erythrocyte:dim(result_cor_erythrocyte)[2]-1])
+      }
     }
-  }
-  
   ## cog ----
-  if(!is.null(data$marker_list$coagulation)){
-    result_cor_coagulation <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$coagulation)])
+  if (!is.null(coagulation_marker) && length(coagulation_marker) > 0) {
+    result_cor_coagulation <- abs(result_cor[, colnames(result_cor) %in% coagulation_marker, drop = FALSE])
     result_cor_coagulation$avg <- NA
     result_cor_coagulation <- as.matrix(result_cor_coagulation)
     for (i in 1:dim(result_cor_coagulation)[1]) {
@@ -95,8 +85,8 @@ data_correct <- function(data,
   }
   
   ## platelet ----
-  if(!is.null(data$marker_list$platelet)){
-    result_cor_platelet <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$platelet)])
+  if (!is.null(platelet_marker) && length(platelet_marker) > 0) {
+    result_cor_platelet <- abs(result_cor[, colnames(result_cor) %in% platelet_marker, drop = FALSE])
     result_cor_platelet$avg <- NA
     result_cor_platelet <- as.matrix(result_cor_platelet)
     for (i in 1:dim(result_cor_platelet)[1]) {
