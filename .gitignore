@@ -29,7 +29,7 @@
 *.html
 *.docx
 *.xlsx
-*.png
+# *.png
 *.jpg
 
 # Shiny应用临时文件
