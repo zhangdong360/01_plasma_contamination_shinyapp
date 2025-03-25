@@ -17,37 +17,50 @@ ui <- fluidPage(
   tabsetPanel(id = "Step",
               ## Welcome Tab ----
               tabPanel("Welcome",
-                       fluidRow(
-                         column(width = 10, offset = 1,  # 使用offset创建左右边距实现居中效果
-                                style = "text-align: left;",  # 内部文本左对齐
-                                h2("Welcome to Plasma Protein Analysis Tool", style = "text-align: center;"),  # 标题单独居中
-                                div(style = "text-align: center;",  # 图片居中
-                                    img(src = "Welcome.png", style = "max-width: 80%; height: auto; margin: 20px 0;")
-                                ),
-                                p("This interactive tool allows you to analyze and correct for contamination in plasma proteomics data."),
-                                h4("Key features:", style = "margin-top: 20px;"),
-                                tags$ul(
-                                  style = "padding-left: 20px;",  # 调整列表缩进
-                                  tags$li("Data quality assessment and visualization"),
-                                  tags$li("Contamination marker evaluation"),
-                                  tags$li("Correction for erythrocyte, platelet and coagulation contamination"),
-                                  tags$li("Differential expression analysis"),
-                                  tags$li("Interactive visualization of results")
-                                ),
-                                p("To get started, upload your data in 'Step 1: Data Input' or use the example dataset."),
-                                h4("How to use:", style = "margin-top: 20px;"),
-                                tags$ol(
-                                  style = "padding-left: 20px;",  # 调整列表缩进
-                                  tags$li("Upload your protein expression data and group information"),
-                                  tags$li("Check data quality and select contamination markers"),
-                                  tags$li("Run correction for selected contamination types"),
-                                  tags$li("Perform differential expression analysis")
-                                ),
-                                # 可以添加更多间距或装饰元素
-                                hr(style = "margin: 30px 0; border-top: 1px solid #eee;"),
-                                p(style = "text-align: center; font-style: italic;", 
-                                  "For questions or feedback, please contact support@example.com")
-                         )
+                       # 外层容器：确保内容整体居中
+                       div(style = "display: flex; justify-content: center; width: 100%;",
+                           # 内容区域：固定最大宽度并左对齐
+                           div(style = "max-width: 900px; width: 90%; text-align: left; padding: 20px;",
+                               
+                               # 标题（居中显示）
+                               h2("Welcome to Plasma Protein Analysis Tool", 
+                                  style = "text-align: center; font-size: calc(20px + 1vw); margin-bottom: 25px;"),
+                               
+                               # 图片（居中显示但内容左对齐）
+                               div(style = "text-align: center; margin: 20px 0;",
+                                   img(src = "Welcome.png", 
+                                       style = "max-width: 100%; height: auto; border-radius: 8px;")
+                               ),
+                               
+                               # 正文（强制左对齐）
+                               div(style = "text-align: left;",  # 显式覆盖可能继承的居中样式
+                                   p("This interactive tool allows you to analyze and correct for contamination in plasma proteomics data."),
+                                   
+                                   h4("Key features:", style = "margin-top: 25px;"),
+                                   tags$ul(
+                                     style = "padding-left: 20px;",
+                                     tags$li("Data quality assessment and visualization"),
+                                     tags$li("Contamination marker evaluation"),
+                                     tags$li("Correction for erythrocyte, platelet and coagulation contamination"),
+                                     tags$li("Differential expression analysis"),
+                                     tags$li("Interactive visualization of results")
+                                   ),
+                                   
+                                   h4("How to use:", style = "margin-top: 25px;"),
+                                   tags$ol(
+                                     style = "padding-left: 20px;",
+                                     tags$li("Upload your protein expression data and group information"),
+                                     tags$li("Check data quality and select contamination markers"),
+                                     tags$li("Run correction for selected contamination types"),
+                                     tags$li("Perform differential expression analysis")
+                                   )
+                               ),
+                               
+                               # 页脚（居中显示）
+                               hr(style = "margin: 30px 0; border-top: 1px solid #eee;"),
+                               p(style = "text-align: center; font-style: italic;", 
+                                 "For questions or feedback, please contact support@example.com")
+                           )
                        )
               ),
               ## Step1 ----
@@ -484,9 +497,9 @@ server <- function(input, output, session) {
     showModal(modalDialog("Running QC PCA, please wait...", footer = NULL))
     source("./R/modules/QC_PCA.R")
     req(result_check())
-    QC_PCA(data = result_check()$rawdata,
-           data_group = result_check()$group)
     removeModal()
+    return(QC_PCA(data = result_check()$rawdata,
+                  data_group = result_check()$group))
   },height = 400,width = 500)
   #### heatmap ----
   output$heatmap_pre_plot <- renderPlot({
@@ -945,7 +958,6 @@ server <- function(input, output, session) {
   output$result_de_pre_table <- renderDT({
     req(result_de_pre())
     datatable(result_de_pre(), options = list(pageLength = 10))  # 每页显示 10 行
-    removeModal()
   })
   output$result_de_post_table <- renderDT({
     req(result_de_post())
