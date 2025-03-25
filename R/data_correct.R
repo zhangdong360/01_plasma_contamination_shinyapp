@@ -37,12 +37,28 @@ data_correct <- function(data,
     list_platelet <- for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,])
     list_coagulation <- for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,])
     
-    smpl2 <- data.frame(
+    list_erythrocyte <-  if (any(rownames(data$rawdata) %in% erythrocyte_marker)) {
+      for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,,drop = FALSE])
+    } else {
+      NULL
+    }
+    list_platelet <- if (any(rownames(data$rawdata) %in% platelet_marker)) {
+      for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,, drop = FALSE])
+    } else {
+      NULL
+    }
+    list_coagulation <- if (any(rownames(data$rawdata) %in% coagulation_marker)) {
+      for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,,drop = FALSE])
+    } else {
+      NULL
+    }
+    
+    components  <- data.frame(
       erythrocyte = list_erythrocyte,
       Platelet = list_platelet,
       coagulation = list_coagulation
     )
-    return(smpl2)
+    return(components )
   }
   
   smpl2 <- mean_2(data)
@@ -102,6 +118,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
@@ -124,6 +141,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
       Constraint_factor_plate <- result_cor_platelet[colnames(y),"avg"]
@@ -143,6 +161,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_coagu <- smpl2$coagulation
       Constraint_factor_eryth <- result_cor_erythrocyte[colnames(y),"avg"]
@@ -162,6 +181,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_plate <- smpl2$Platelet
       Constraint_factor_eryth <- result_cor_erythrocyte[colnames(y),"avg"]
@@ -181,6 +201,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       a <- summary(rlm(log2(y + 1) ~ x_eryth, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
@@ -196,6 +217,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_plate <- smpl2$Platelet
       # x_coagu <- smpl2$coagulation
       a <- summary(rlm(log2(y + 1) ~ x_plate, maxit = 30))
@@ -212,6 +234,7 @@ data_correct <- function(data,
     for (i in 1:nrow(ndata1)) {
       y <- rawdata[i, ] # expression across samples
       y <- t(y)
+      smpl2 <- smpl2[rownames(y),]
       x_coagu <- smpl2$coagulation
       a <- summary(rlm(log2(y + 1) ~ x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {

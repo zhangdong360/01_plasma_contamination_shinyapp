@@ -352,7 +352,7 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "type_coagulation", value = TRUE)
     }
   })
-  
+
   # 当三个子项全选时自动选中"All"
   observe({
     all_selected <- all(
@@ -362,7 +362,7 @@ server <- function(input, output, session) {
     )
     updateCheckboxInput(session, "type_all", value = all_selected)
   })
-  
+
   # 获取最终选择的校正类型
   selected_types <- reactive({
     types <- c()
@@ -371,7 +371,8 @@ server <- function(input, output, session) {
     if (input$type_coagulation) types <- c(types, "coagulation")
     types
   })
-  
+
+ 
   ### 矫正 ----
   observeEvent(input$run_correct, {
     req(result_check())
