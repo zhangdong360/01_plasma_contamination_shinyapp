@@ -330,7 +330,7 @@ server <- function(input, output, session) {
       custom_platelet = selected_markers$platelet
     )
     result_check(check_result)
-    removeModal()
+    
   }
   ### Step1检查按钮 ----
   observeEvent(input$run_check, {
@@ -446,10 +446,12 @@ server <- function(input, output, session) {
   },height = 400,width = 500)
   #### pca ----
   output$pca_pre_plot <- renderPlot({
+    showModal(modalDialog("Running QC PCA, please wait...", footer = NULL))
     source("./R/modules/QC_PCA.R")
     req(result_check())
     QC_PCA(data = result_check()$rawdata,
            data_group = result_check()$group)
+    removeModal()
   },height = 400,width = 500)
   #### heatmap ----
   output$heatmap_pre_plot <- renderPlot({
@@ -509,10 +511,10 @@ server <- function(input, output, session) {
                                           displayNumbers = T,input_type = "correlation")
     return(result$plot)
   },height = 400,width = 800)
-  output$cor_erythrocyte_data <- renderDT({
-    req(result_check())
-    datatable(result_check()$correlation$erythrocyte$r, options = list(pageLength = 10))  # 每页显示 10 行
-  })
+  # output$cor_erythrocyte_data <- renderDT({
+  #   req(result_check())
+  #   datatable(result_check()$correlation$erythrocyte$r, options = list(pageLength = 10))  # 每页显示 10 行
+  # })
   ### coa ----
   output$cor_coagulation_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
@@ -521,10 +523,10 @@ server <- function(input, output, session) {
                                           displayNumbers = T,input_type = "correlation")
     return(result$plot)
   },height = 400,width = 800)
-  output$cor_coagulation_data <- renderDT({
-    req(result_check())
-    datatable(result_check()$correlation$coagulation$r, options = list(pageLength = 10))  # 每页显示 10 行
-  })
+  # output$cor_coagulation_data <- renderDT({
+  #   req(result_check())
+  #   datatable(result_check()$correlation$coagulation$r, options = list(pageLength = 10))  # 每页显示 10 行
+  # })
   ### platelet ----
   output$cor_platelet_plot <- renderPlot({
     source("./R/plot_expression_correlation.R")
@@ -533,10 +535,10 @@ server <- function(input, output, session) {
                                        displayNumbers = T,input_type = "correlation")
     return(result$plot)
   },height = 400,width = 800)
-  output$cor_platelet_data <- renderDT({
-    req(result_check())
-    datatable(result_check()$correlation$platelet$r, options = list(pageLength = 10))  # 每页显示 10 行
-  })
+  # output$cor_platelet_data <- renderDT({
+  #   req(result_check())
+  #   datatable(result_check()$correlation$platelet$r, options = list(pageLength = 10))  # 每页显示 10 行
+  # })
   ## 显示缺失基因 ----
   output$contamination_summary <- renderPrint({
     req(result_check())
@@ -691,7 +693,9 @@ server <- function(input, output, session) {
       )
     }
     
-    p
+    removeModal()
+    return(p)
+    
   }, height = 400, width = 500)
   output$cv_post_plot <- renderPlot({
     source("./R/modules/get_cv.R")
@@ -876,20 +880,20 @@ server <- function(input, output, session) {
     source("./R/plot_protein_by_sample.R")
     plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$coagulation,])
   })
-  # 显示污染矩阵 ----
-  output$data_marker_erythrocyte <- renderDT({
-    req(result_check())
-    datatable(result_check()$data$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
-  })
-  output$data_marker_coagulation <- renderDT({
-    req(result_check())
-    datatable(result_check()$data$coagulation, options = list(pageLength = 10))  # 每页显示 10 行
-  })
-  output$data_marker_platelet <- renderDT({
-    req(result_check())
-    datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
-  })
-  
+  # 显示污染矩阵(不显示）) ----
+  # output$data_marker_erythrocyte <- renderDT({
+  #   req(result_check())
+  #   datatable(result_check()$data$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
+  # })
+  # output$data_marker_coagulation <- renderDT({
+  #   req(result_check())
+  #   datatable(result_check()$data$coagulation, options = list(pageLength = 10))  # 每页显示 10 行
+  # })
+  # output$data_marker_platelet <- renderDT({
+  #   req(result_check())
+  #   datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
+  # })
+  # 
   
   
   # corrected_plot 显示校正后污染水平可视化 ----
@@ -906,6 +910,7 @@ server <- function(input, output, session) {
   output$result_de_pre_table <- renderDT({
     req(result_de_pre())
     datatable(result_de_pre(), options = list(pageLength = 10))  # 每页显示 10 行
+    removeModal()
   })
   output$result_de_post_table <- renderDT({
     req(result_de_post())
