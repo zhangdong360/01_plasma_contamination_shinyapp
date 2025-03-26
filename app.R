@@ -109,9 +109,9 @@ ui <- fluidPage(
                            tags$div(class = "form-group",
                                     tags$label(class = "control-label", "Correction Type"),
                                     checkboxInput("type_all", "All", value = FALSE),
-                                    checkboxInput("type_erythrocyte", "Erythrocyte", value = FALSE),
-                                    checkboxInput("type_platelet", "Platelet", value = FALSE),
-                                    checkboxInput("type_coagulation", "Coagulation", value = FALSE)),
+                                    uiOutput("erythrocyte_checkbox"),
+                                    uiOutput("platelet_checkbox"),
+                                    uiOutput("coagulation_checkbox")),
                            actionButton("run_correct", "Run Correction")),
                          mainPanel(h3("Data Quality Assessment"),
                                    h4("Contamination Summary"),
@@ -296,11 +296,11 @@ ui <- fluidPage(
                            
                            h3("4. 常见问题", style = "color: #34495e;"),
                            tags$ul(
-                             tags$li("Q1: 校正后数据出现负值怎么办？",
+                             tags$li(strong("Q1: "),"校正后数据出现负值怎么办？",
                                      "A: 这是正常现象，可能存在过小值，因为程序会自动进行log2转化"),
-                             tags$li("Q2: 如何确定最佳相关系数阈值？",
+                             tags$li(strong("Q2: "),"如何确定最佳相关系数阈值？",
                                      "A: 默认0.9即可满足绝大多数情况下的需求，如果符合要求的marker过少，则可以适当放宽"),
-                             tags$li("Q3: 校正后差异蛋白数量显著变化是否正常？",
+                             tags$li(strong("Q3: "),"校正后差异蛋白数量显著变化是否正常？",
                                      "A: 是预期现象，说明污染对结果有显著影响，需结合生物学意义解读，正常情况下，去除的差异蛋白是由污染导致的，会富集到污染相关通路。而新增的差异蛋白则是被污染掩盖的符合生物学预期的蛋白，会富集到生物学相关通路")
                            )
                        )
@@ -500,7 +500,30 @@ server <- function(input, output, session) {
     types
   })
 
- 
+  
+  output$erythrocyte_checkbox <- renderUI({
+    req(result_check())
+    markers <- result_check()$marker_list$erythrocyte
+    label <- if (length(markers) == 0) "Erythrocyte (no contamination)" else "Erythrocyte"
+                 checkboxInput("type_erythrocyte", label, 
+                               value = if (length(markers) > 0) TRUE else FALSE)
+                 })
+    
+    output$platelet_checkbox <- renderUI({
+      req(result_check())
+      markers <- result_check()$marker_list$platelet
+      label <- if (length(markers) == 0) "Platelet (no contamination)" else "Platelet"
+                   checkboxInput("type_platelet", label, 
+                                 value = if (length(markers) > 0) TRUE else FALSE)
+                   })
+      
+      output$coagulation_checkbox <- renderUI({
+        req(result_check())
+        markers <- result_check()$marker_list$coagulation
+        label <- if (length(markers) == 0) "Coagulation (no contamination)" else "Coagulation"
+                     checkboxInput("type_coagulation", label, 
+                                   value = if (length(markers) > 0) TRUE else FALSE)
+                     })
   ### 矫正 ----
   observeEvent(input$run_correct, {
     req(result_check())
@@ -599,12 +622,14 @@ server <- function(input, output, session) {
   #### correlation ----
   output$correlation_p_post_plot <- renderPlot({
     source("./R/plot_stat_distribution.R")
+    req(result_check())  # 确保数据存在
     req(result_correct())
     plot_stat_distribution(data = result_correct()$correct_data,
                            type = "pearson", statistic = "pvalue", alpha = 0.05)
   },height = 400,width = 500)
   output$correlation_r_post_plot <- renderPlot({
     source("./R/plot_stat_distribution.R")
+    req(result_check())  # 确保数据存在
     req(result_correct())
     plot_stat_distribution(data = result_correct()$correct_data,
                            type = "pearson", statistic = "correlation", alpha = 0.05)
@@ -612,6 +637,7 @@ server <- function(input, output, session) {
   #### pca ----
   output$pca_post_plot <- renderPlot({
     source("./R/modules/QC_PCA.R")
+    req(result_check())  # 确保数据存在
     req(result_correct())
     QC_PCA(data = result_correct()$correct_data,
            data_group = result_correct()$group)
@@ -619,6 +645,7 @@ server <- function(input, output, session) {
   #### heatmap ----
   output$heatmap_post_plot <- renderPlot({
     source("./R/modules/QC_heatmap.R")
+    req(result_check())  # 确保数据存在
     req(result_correct())
     QC_heatmap(data = result_correct()$correct_data,
                data_group = result_correct()$group)
@@ -626,6 +653,7 @@ server <- function(input, output, session) {
   #### boxplot ----
   output$boxplot_post_plot <- renderPlot({
     source("./R/modules/QC_boxplot.R")
+    req(result_check())  # 确保数据存在
     req(result_correct())
     QC_boxplot(data = result_correct()$correct_data,
                data_group = result_correct()$group)
@@ -827,6 +855,7 @@ server <- function(input, output, session) {
   }, height = 400, width = 500)
   output$cv_post_plot <- renderPlot({
     source("./R/modules/get_cv.R")
+    req(result_check())  # 确保数据存在
     req(result_correct())
     data <- result_correct()
     # 获取各个marker列表
@@ -990,6 +1019,7 @@ server <- function(input, output, session) {
   ### post ----
   #### erythrocyte marker ----
   output$erythrocyte_marker_post_plot <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_correct())
     source("./R/plot_protein_by_sample.R")
     plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$erythrocyte,])
@@ -997,6 +1027,7 @@ server <- function(input, output, session) {
   
   #### platelet marker ----
   output$platelet_marker_post_plot <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_correct())
     source("./R/plot_protein_by_sample.R")
     plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$platelet,])
@@ -1004,6 +1035,7 @@ server <- function(input, output, session) {
   
   #### coagulation marker ----
   output$coagulation_marker_post_plot <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_correct())
     source("./R/plot_protein_by_sample.R")
     plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$coagulation,])
@@ -1026,6 +1058,7 @@ server <- function(input, output, session) {
   
   # corrected_plot 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_correct())
     if (is.null(result_correct()$contamination_level)) {
       return(NULL)  # 如果 contamination_level 为 NULL，不绘制图表
@@ -1036,15 +1069,18 @@ server <- function(input, output, session) {
   
   # 显示差异表达结果 ----
   output$result_de_pre_table <- renderDT({
+    req(result_check())  # 确保数据存在
     req(result_de_pre())
     datatable(result_de_pre(), options = list(pageLength = 10))  # 每页显示 10 行
   })
   output$result_de_post_table <- renderDT({
+    req(result_check())  # 确保数据存在
     req(result_de_post())
     datatable(result_de_post(), options = list(pageLength = 10))  # 每页显示 10 行
   })
   # 绘制VN图 ----
   output$vn_plot <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_de_post())
     req(result_de_pre())
     venn_plot(
@@ -1059,6 +1095,7 @@ server <- function(input, output, session) {
   },height = 500,width = 500)
   # 绘制火山图 ----
   output$volc_de_pre <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_de_pre())
     plot_volc <- create_volcano_plot(result_de_pre(), 
                                      p_type = "raw", 
@@ -1070,6 +1107,7 @@ server <- function(input, output, session) {
     print(plot_volc)
   },height = 500,width = 600)
   output$volc_de_post <- renderPlot({
+    req(result_check())  # 确保数据存在
     req(result_de_post())
     plot_volc <- create_volcano_plot(result_de_post(), 
                                      p_type = "raw", 

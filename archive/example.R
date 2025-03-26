@@ -36,10 +36,10 @@ rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.5)
 
 result_correct <- data_correct(data = result_check,
-                               type = "all",
-                               erythrocyte_marker = result_check$gene$erythrocyte,
-                               coagulation_marker = result_check$gene$coagulation,
-                               platelet_marker = result_check$gene$platelet)
+                               type = c("coagulation","erythrocyte","platelet"),
+                               erythrocyte_marker = result_check$marker_list$erythrocyte,
+                               coagulation_marker = result_check$marker_list$coagulation,
+                               platelet_marker = result_check$marker_list$platelet)
 # CV ----
 result_cv_coa <- get_cv(raw_data = result_check$rawdata,
                         protein = result_check$marker_list$coagulation)

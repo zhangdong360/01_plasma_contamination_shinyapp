@@ -1,5 +1,5 @@
 data_correct <- function(data, 
-                         type = "all",constraint = 1,
+                         type = c("coagulation","erythrocyte","platelet"),constraint = 1,
                          erythrocyte_marker,constraint_erythrocyte = 0.95,
                          coagulation_marker,constraint_coagulation = 0.95,
                          platelet_marker,constraint_platelet = 0.95) {
@@ -33,24 +33,24 @@ data_correct <- function(data,
       return(mean)
     }
     # 计算污染水平
-    list_erythrocyte <- for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,])
-    list_platelet <- for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,])
-    list_coagulation <- for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,])
+    # list_erythrocyte <- for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,])
+    # list_platelet <- for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,])
+    # list_coagulation <- for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,])
     
     list_erythrocyte <-  if (any(rownames(data$rawdata) %in% erythrocyte_marker)) {
       for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,,drop = FALSE])
     } else {
-      NULL
+      rep(NA,dim(data$rawdata)[2])
     }
     list_platelet <- if (any(rownames(data$rawdata) %in% platelet_marker)) {
       for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,, drop = FALSE])
     } else {
-      NULL
+      rep(NA,dim(data$rawdata)[2])
     }
     list_coagulation <- if (any(rownames(data$rawdata) %in% coagulation_marker)) {
       for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,,drop = FALSE])
     } else {
-      NULL
+      rep(NA,dim(data$rawdata)[2])
     }
     
     components  <- data.frame(
