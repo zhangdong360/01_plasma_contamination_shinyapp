@@ -224,7 +224,87 @@ ui <- fluidPage(
                              )
                            )
                          )
+                       ),
+              ## 在tabsetPanel中添加User Manual选项卡（Step4之后）----
+              tabPanel("User Manual",
+                       div(style = "padding: 20px; max-width: 1000px; margin: 0 auto;",
+                           h2("User Manual", style = "color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px;"),
+                           
+                           h3("1. 工具概述", style = "color: #34495e;"),
+                           p("本工具专为血浆蛋白质组学数据分析设计，提供以下核心功能："),
+                           tags$ul(
+                             tags$li("数据质量评估与可视化"),
+                             tags$li("红细胞、血小板和凝血系统污染评估"),
+                             tags$li("污染校正算法（基于稳健回归模型）"),
+                             tags$li("差异表达分析与富集分析"),
+                             tags$li("交互式结果可视化与数据导出")
+                           ),
+                           
+                           h3("2. 使用指南", style = "color: #34495e;"),
+                           h4("2.1 数据输入", style = "color: #7f8c8d;"),
+                           tags$ol(
+                             tags$li(strong("数据源选择："),"可选择示例数据进行参考，或上传CSV文件（基因表达矩阵和分组信息）"),
+                             tags$li(strong("文件格式要求："),
+                                     tags$ul(
+                                       tags$li("表达矩阵：第一列为蛋白质名称，列为样本，需进行缺失值填充，无需进行log2转化（软件会自行进行log2转化）"),
+                                       tags$li("分组信息：包含id（匹配表达矩阵列名）和group列")
+                                     )),
+                             tags$li(strong("参数设置："),
+                                     "选择比较组，设置相关系数阈值（默认0.9）")
+                           ),
+                           
+                           h4("2.2 污染评估", style = "color: #7f8c8d;"),
+                           tags$ol(
+                             tags$li(strong("质量评估："),"查看PCA、热图、相关系数分布等质量控制图表"),
+                             tags$li(strong("标记物选择："),
+                                     tags$ul(
+                                       tags$li("从污染种类列表中选择Cv值较高的污染panel"),
+                                       tags$li("通过相关性分析和差异表达筛选有效标记物")
+                                     )),
+                             tags$li(strong("污染水平："),
+                                     tags$ul("通过CV分布评估各污染类型的影响程度，通过各样本的污染物marker表达来评估各样本的污染程度大小"),
+                                     tags$ul("如果污染panel的CV值并不显著高于其他正常蛋白，或污染panel的marker无高相关形况，则该数据集无显著污染存在"),
+                                     tags$ul("如果污染panel的marker在两分组均有显著差异，则无法分辨差异是污染还是生物学差异导致，无法进行矫正"))
+                           ),
+                           
+                           h4("2.3 数据校正", style = "color: #7f8c8d;"),
+                           tags$ol(
+                             tags$li(strong("校正类型："),"选择需要校正的污染类型（红细胞、血小板、凝血系统），请勿选择无可用marker的污染类型进行矫正"),
+                             tags$li(strong("约束因子："),"通过滑块调整校正强度（推荐范围0.8-1.2，默认为1）"),
+                             tags$li(strong("质量控制："),"比较校正前后的PCA、污染markerCV变化等质量指标")
+                           ),
+                           
+                           h4("2.4 差异分析", style = "color: #7f8c8d;"),
+                           tags$ol(
+                             tags$li(strong("分析方法："),"基于limma的差异表达分析"),
+                             tags$li(strong("结果解读："),
+                                     tags$ul(
+                                       tags$li("通过Venn图比较校正前后差异蛋白重叠情况"),
+                                       tags$li("火山图展示显著性差异蛋白")
+                                     )),
+                             tags$li(strong("数据导出："),"支持CSV格式的结果下载")
+                           ),
+                           
+                           h3("3. 注意事项", style = "color: #34495e;"),
+                           tags$ul(
+                             tags$li(strong("数据预处理："),"建议进缺失值处理后再上传"),
+                             tags$li(strong("标记物验证："),"需确保选择的污染标记物在数据集中稳定表达"),
+                             tags$li(strong("参数优化："),"建议通过CV分布，相关系数分布图和PCA结果等调整约束因子，在绝大多数情况下，默认值即可满足需求"),
+                             tags$li(strong("结果验证："),"校正后应观察到污染标记物的CV值显著降低，同时数据集的相关系数分布中高相关分布显著减少"),
+                             tags$li(strong("技术支持："),"遇到问题请联系support@proteomics.com")
+                           ),
+                           
+                           h3("4. 常见问题", style = "color: #34495e;"),
+                           tags$ul(
+                             tags$li("Q1: 校正后数据出现负值怎么办？",
+                                     "A: 这是正常现象，可能存在过小值，因为程序会自动进行log2转化"),
+                             tags$li("Q2: 如何确定最佳相关系数阈值？",
+                                     "A: 默认0.9即可满足绝大多数情况下的需求，如果符合要求的marker过少，则可以适当放宽"),
+                             tags$li("Q3: 校正后差异蛋白数量显著变化是否正常？",
+                                     "A: 是预期现象，说明污染对结果有显著影响，需结合生物学意义解读，正常情况下，去除的差异蛋白是由污染导致的，会富集到污染相关通路。而新增的差异蛋白则是被污染掩盖的符合生物学预期的蛋白，会富集到生物学相关通路")
+                           )
                        )
+              )
               )
   )
 

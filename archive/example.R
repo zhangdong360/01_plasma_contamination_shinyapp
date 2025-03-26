@@ -34,6 +34,12 @@ data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/grou
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.5)
+
+result_correct <- data_correct(data = result_check,
+                               type = "all",
+                               erythrocyte_marker = result_check$gene$erythrocyte,
+                               coagulation_marker = result_check$gene$coagulation,
+                               platelet_marker = result_check$gene$platelet)
 # CV ----
 result_cv_coa <- get_cv(raw_data = result_check$rawdata,
                         protein = result_check$marker_list$coagulation)
@@ -103,11 +109,6 @@ for (i in 1:dim(result_cor_platelet)[1]) {
 }
 
 
-result_correct <- data_correct(data = result_check,
-                               type = "all",
-                               erythrocyte_marker = result_check$gene$erythrocyte,
-                               coagulation_marker = result_check$gene$coagulation,
-                               platelet_marker = result_check$gene$platelet)
 
 ## 相关性分析 ----
 result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T,corMethod = "pearson")
