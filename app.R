@@ -67,15 +67,25 @@ ui <- fluidPage(
               # 改为 data input
               tabPanel("Step 1: Data Input",
                        sidebarLayout(
-                         sidebarPanel(h3("Step 1: Data Input"),
+                         sidebarPanel(h3("Step 1: Data Input",
+                                         tags$span(
+                                           id = 'span1',
+                                           `data-toggle` = "tooltip",
+                                           title = 'In this part, users can upload their own proteomics expression data and sample group data. 
+                                           The example data can be found when users click "Load example data" below. 
+                                           Detailed descriptions are provided in the "Help" part.',
+                                           tags$span(class = "glyphicon glyphicon-question-sign")
+                                         )),
                                       radioButtons("data_source", "Select Data Source",
                                                    choices = list("Load experimental data" = "experimental", 
                                                                   "Load example data" = "example"),
                                                    selected = "experimental"),
                                       conditionalPanel(
                                         condition = "input.data_source == 'experimental'",
-                                        fileInput("data_file", "Upload Data File (CSV)", accept = ".csv"),
-                                        fileInput("group_file", "Upload Group Info File (CSV)", accept = ".csv")
+                                        fileInput("data_file", "Upload Data File (CSV)", 
+                                                  accept = ".csv"),
+                                        fileInput("group_file", "Upload Group Info File (CSV)", 
+                                                  accept = ".csv")
                                       ),
                                       h3("Grouping settings"),
                                       selectInput("group1", "Group 1", choices = NULL),
