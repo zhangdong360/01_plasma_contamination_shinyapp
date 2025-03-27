@@ -112,6 +112,8 @@ ui <- fluidPage(
                                     uiOutput("erythrocyte_checkbox"),
                                     uiOutput("platelet_checkbox"),
                                     uiOutput("coagulation_checkbox")),
+                           sliderInput("constraint_factor", "constraint factor",
+                                       min = 0.5, max = 1.5, value = 1.0, step = 0.01),
                            actionButton("run_correct", "Run Correction")),
                          mainPanel(h3("Data Quality Assessment"),
                                    h4("Contamination Summary"),
@@ -175,8 +177,10 @@ ui <- fluidPage(
               tabPanel("Step 3: Correction Results",
                        sidebarLayout(
                          sidebarPanel(h3("Step 3: Correction Analysis"),
-                                      sliderInput("constraint_factor", "constraint factor",
+                                      sliderInput("constraint_factor_step2", "constraint factor",
                                                   min = 0.5, max = 1.5, value = 1.0, step = 0.01),
+                                      actionButton("run_correct_step2", "Re-run Correction"),
+                                      h3("Step 4: DE Analysis"),
                                       actionButton("run_de", "Run Differential Expression Analysis")
                          ),
                          mainPanel(h3("Correction Outcomes"), 
@@ -329,6 +333,12 @@ server <- function(input, output, session) {
   })
   observeEvent(input$cor_cutoff_step2, {
     updateSliderInput(session, "cor_cutoff", value = input$cor_cutoff_step2)
+  })
+  observeEvent(input$constraint_factor, {
+    updateSliderInput(session, "constraint_factor_step2", value = input$constraint_factor)
+  })
+  observeEvent(input$constraint_factor_step2, {
+    updateSliderInput(session, "constraint_factor", value = input$constraint_factor_step2)
   })
   constraint_factor <- reactive({
     # 当输入不存在时使用默认值1.0
@@ -505,50 +515,79 @@ server <- function(input, output, session) {
     req(result_check())
     markers <- result_check()$marker_list$erythrocyte
     label <- if (length(markers) == 0) "Erythrocyte (no contamination)" else "Erythrocyte"
-                 checkboxInput("type_erythrocyte", label, 
-                               value = if (length(markers) > 0) TRUE else FALSE)
-                 })
-    
-    output$platelet_checkbox <- renderUI({
-      req(result_check())
-      markers <- result_check()$marker_list$platelet
-      label <- if (length(markers) == 0) "Platelet (no contamination)" else "Platelet"
-                   checkboxInput("type_platelet", label, 
-                                 value = if (length(markers) > 0) TRUE else FALSE)
-                   })
-      
-      output$coagulation_checkbox <- renderUI({
-        req(result_check())
-        markers <- result_check()$marker_list$coagulation
-        label <- if (length(markers) == 0) "Coagulation (no contamination)" else "Coagulation"
-                     checkboxInput("type_coagulation", label, 
-                                   value = if (length(markers) > 0) TRUE else FALSE)
-                     })
-  ### 矫正 ----
-  observeEvent(input$run_correct, {
+    checkboxInput("type_erythrocyte", label, 
+                  value = if (length(markers) > 0) TRUE else FALSE)
+  })
+  
+  output$platelet_checkbox <- renderUI({
     req(result_check())
-    req(constraint_factor())  # 确保值存在
+    markers <- result_check()$marker_list$platelet
+    label <- if (length(markers) == 0) "Platelet (no contamination)" else "Platelet"
+    checkboxInput("type_platelet", label, 
+                  value = if (length(markers) > 0) TRUE else FALSE)
+  })
+  
+  output$coagulation_checkbox <- renderUI({
+    req(result_check())
+    markers <- result_check()$marker_list$coagulation
+    label <- if (length(markers) == 0) "Coagulation (no contamination)" else "Coagulation"
+    checkboxInput("type_coagulation", label, 
+                  value = if (length(markers) > 0) TRUE else FALSE)
+                     })
+  ### 主校正函数 ----
+  run_correction <- function(constraint) {
+    req(result_check())
+    req(constraint)  # 确保约束因子存在
     
-    source("./R/data_correct.R",local = TRUE)
+    source("./R/data_correct.R", local = TRUE)
     showModal(modalDialog("Performing data correction, please wait...", footer = NULL))
+    
     # 根据选择的类型动态设置参数
     correction_type <- selected_types()
     
     # 确保至少选择一个类型
     if (length(correction_type) == 0) {
       showNotification("Please select at least one correction type!", type = "error")
-      return()
+      return(NULL)
     }
+    
     # 调用矫正函数
-    correct_result <- data_correct(data = result_check(), 
-                                   type = selected_types(),constraint= constraint_factor(),
-                                   erythrocyte_marker = result_check()$marker_list$erythrocyte,
-                                   coagulation_marker = result_check()$marker_list$coagulation,
-                                   platelet_marker = result_check()$marker_list$platelet)
-    result_correct(correct_result)
+    correct_result <- tryCatch({
+      data_correct(
+        data = result_check(), 
+        type = correction_type,
+        constraint = constraint,
+        erythrocyte_marker = result_check()$marker_list$erythrocyte,
+        coagulation_marker = result_check()$marker_list$coagulation,
+        platelet_marker = result_check()$marker_list$platelet
+      )
+    }, error = function(e) {
+      showNotification(paste("Correction failed:", e$message), type = "error")
+      return(NULL)
+    })
+    
     removeModal()
-    updateTabsetPanel(session, "Step", selected = "Step 3: Correction Results")
+    return(correct_result)
+  }
+  
+  ### Step2校正按钮 ----
+  observeEvent(input$run_correct, {
+    correct_result <- run_correction(input$constraint_factor)
+    if (!is.null(correct_result)) {
+      result_correct(correct_result)
+      updateTabsetPanel(session, "Step", selected = "Step 3: Correction Results")
+    }
   })
+  
+  ### Step3重新校正按钮 ----
+  observeEvent(input$run_correct_step2, {
+    correct_result <- run_correction(input$constraint_factor_step2)
+    if (!is.null(correct_result)) {
+      result_correct(correct_result)
+      showNotification("Correction re-run successfully!", type = "message")
+    }
+  })
+ 
   ## 差异表达分析 ----
   observeEvent(input$run_de, {
     source("./R/de_analysis_module.R")
