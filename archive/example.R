@@ -5,14 +5,15 @@ source("./R/plot_protein.R")
 source("./R/plot_expression_correlation.R")
 source("./R/modules/get_cv.R")
 library(ggsci)
-# test
+# data input ----
+## test ----
 df <- read.csv("./tests/raw_data_aggr.csv")
 rownames(df) <- df[, 1]  # 将第一列设置为行名
 df <- df[, -1, drop = FALSE]  # 删除第一列
 df
 data_group <- read.csv("./tests/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
-# cov
+## cov ----
 # df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/Plasma_matrix_after_seqknn.csv")
 # colnames(df)[1] <- "From"
 # library(readr)
@@ -33,7 +34,16 @@ df
 data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 
-result_check <- data_check(data = df,data_group = data_group,cutoff = 0.5)
+## IPX0002802000 ----
+df <- read.csv("./tests/IPX0002802000/data_IPX0002802000.csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
+data_group <- read.csv("./tests/IPX0002802000/data_group_IPX0002802000.csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+# data check ----
+
+result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
 
 result_correct <- data_correct(data = result_check,
                                type = c("coagulation","erythrocyte","platelet"),
@@ -51,6 +61,7 @@ result_cv_other <- get_cv(raw_data =  result_check$rawdata[!rownames(result_chec
                                                      c(result_check$marker_list$coagulation,
                                                        result_check$marker_list$erythrocyte,
                                                        result_check$marker_list$platelet),])
+
 result_cv_coa$type <- "coagulation"
 result_cv_ery$type <- "erythrocyte"
 result_cv_pla$type <- "platelet"

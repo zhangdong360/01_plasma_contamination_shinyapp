@@ -90,21 +90,35 @@ data_check <- function(data, data_group, cutoff = 0.9,
   }
   
   # 收集所有统计信息
-  analyze_markers_full <- function(data_ggplot, marker_list,analyze_markers_result,correlation_result) {
+  analyze_markers_full <- function(data_ggplot, marker_list, analyze_markers_result, correlation_result) {
     target_proteins <- marker_list$GN
     data_filtered <- data_ggplot %>% 
       filter(key %in% target_proteins)
-    ggplot_build_obj <- ggplot_build(analyze_markers_result$plot)
-    analyze_markers_result$keys_with_high_pvalue
-    stat_results <- ggplot_build_obj$data[[2]]
-    stat_results <- subset(stat_results,select = c(p))
-    # 计算统计信息
-    stats <- data.frame(key = target_proteins,
-                        exists = ifelse(target_proteins%in%unique(data_filtered$key),"Pass","NA"),
-                        DE = ifelse(target_proteins%in%analyze_markers_result$keys_with_high_pvalue,"Pass","Non-removable inter-sample heterogeneity"),
-                        correlation = ifelse(target_proteins%in%correlation_result$high_corr_keys,"Pass","Low statistical correlation"))
-    stats[stats$exists%in% FALSE,"DE"] <- NA
-    stats[stats$exists%in% FALSE,"correlation"] <- NA
+    
+    # 更健壮的方式检查基因是否存在
+    exists_status <- ifelse(target_proteins %in% unique(data_ggplot$key), "Pass", "NA")
+    
+    # 更安全的方式提取p值
+    p_values <- tryCatch({
+      ggplot_build_obj <- ggplot_build(analyze_markers_result$plot)
+      stat_data <- ggplot_build_obj$data[[2]]  # 假设统计结果在第二个图层
+      stat_data$p
+    }, error = function(e) rep(NA, length(target_proteins)))
+    
+    # 创建统计结果数据框
+    stats <- data.frame(
+      key = target_proteins,
+      exists = exists_status,
+      DE = ifelse(target_proteins %in% analyze_markers_result$keys_with_high_pvalue, 
+                  "Pass", "Non-removable inter-sample heterogeneity"),
+      correlation = ifelse(target_proteins %in% correlation_result$high_corr_keys,
+                           "Pass", "Low statistical correlation"),
+      stringsAsFactors = FALSE
+    )
+    
+    # 对于不存在的基因，将DE和correlation设为NA
+    stats[stats$exists == "NA", c("DE", "correlation")] <- NA
+    
     return(stats)
   }
 

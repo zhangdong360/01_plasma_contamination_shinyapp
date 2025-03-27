@@ -3,7 +3,7 @@
 get_cv <- function(raw_data,protein = rownames(raw_data),
                    data_group = NULL,
                    by_group = F){
-  raw_data <- raw_data[rownames(raw_data)%in%protein,]
+  raw_data <- raw_data[rownames(raw_data)%in%protein,,drop = F]
   result_cv <- matrix(nrow = dim(raw_data)[1])
   result_cv <- as.data.frame(result_cv)
   if(by_group){

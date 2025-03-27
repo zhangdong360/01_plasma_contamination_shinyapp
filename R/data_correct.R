@@ -78,13 +78,17 @@ data_correct <- function(data,
   ## ery ----
   if (!is.null(erythrocyte_marker) && length(erythrocyte_marker) > 0) {
     result_cor_erythrocyte <- abs(result_cor[, colnames(result_cor) %in% erythrocyte_marker, drop = FALSE])
-    result_cor_erythrocyte <- abs(result_cor[,colnames(result_cor)%in%c(data$marker_list$erythrocyte)])
     result_cor_erythrocyte$avg <- NA
     result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
     for (i in 1:dim(result_cor_erythrocyte)[1]) {
       result_cor_erythrocyte <- result_cor_erythrocyte[,order(result_cor_erythrocyte[i,])]
-      start_col_erythrocyte <- min(max(round(dim(result_cor_erythrocyte)[2]*constraint_erythrocyte_original),1),dim(result_cor_erythrocyte)[2]-2)
-      result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,start_col_erythrocyte:dim(result_cor_erythrocyte)[2]-1])
+      if (dim(result_cor_erythrocyte)[2] < 3) {
+        result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,],na.rm = T)
+      }else if (dim(result_cor_erythrocyte)[2] > 2) {
+        start_col_erythrocyte <- min(max(round(dim(result_cor_erythrocyte)[2]*constraint_erythrocyte_original),1),
+                                     dim(result_cor_erythrocyte)[2]-2)
+        result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,start_col_erythrocyte:dim(result_cor_erythrocyte)[2]-1])
+        }
       }
     }
   ## cog ----
@@ -94,9 +98,13 @@ data_correct <- function(data,
     result_cor_coagulation <- as.matrix(result_cor_coagulation)
     for (i in 1:dim(result_cor_coagulation)[1]) {
       result_cor_coagulation <- result_cor_coagulation[,order(result_cor_coagulation[i,])]
-      start_col_coagulation <- min(max(round(dim(result_cor_coagulation)[2]*constraint_coagulation_original),1),
-                                   dim(result_cor_coagulation)[2]-2)
-      result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,start_col_coagulation:dim(result_cor_coagulation)[2]-1])
+      if (dim(result_cor_coagulation)[2] < 3) {
+        result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,],na.rm = T)
+      }else if (dim(result_cor_coagulation)[2] > 2){
+        start_col_coagulation <- min(max(round(dim(result_cor_coagulation)[2]*constraint_coagulation_original),1),
+                                     dim(result_cor_coagulation)[2]-2)
+        result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,start_col_coagulation:dim(result_cor_coagulation)[2]-1])
+      }
     }
   }
   
@@ -107,8 +115,13 @@ data_correct <- function(data,
     result_cor_platelet <- as.matrix(result_cor_platelet)
     for (i in 1:dim(result_cor_platelet)[1]) {
       result_cor_platelet <- result_cor_platelet[,order(result_cor_platelet[i,])]
-      start_col_platelet <- min(max(round(dim(result_cor_platelet)[2]*constraint_platelet_original),1),dim(result_cor_platelet)[2]-2)
-      result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,start_col_platelet:dim(result_cor_platelet)[2]-1])
+      if (dim(result_cor_platelet)[2] < 3){
+        result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,],na.rm = T)
+      }else if (dim(result_cor_platelet)[2] > 2){
+        start_col_platelet <- min(max(round(dim(result_cor_platelet)[2]*constraint_platelet_original),1),
+                                  dim(result_cor_platelet)[2]-2)
+        result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,start_col_platelet:dim(result_cor_platelet)[2]-1])
+      }
     }
   }
   

@@ -829,7 +829,7 @@ server <- function(input, output, session) {
       geom_violin() +
       geom_boxplot(fill = "white", width = 0.15) +
       scale_fill_manual(values = color_values) +
-      theme_classic() +
+      theme_minimal(base_size = 14) +
       theme(
         axis.text.x = element_blank(),
         axis.text.y = element_text(size = 13),
@@ -843,7 +843,7 @@ server <- function(input, output, session) {
     if (length(comparisons) > 0) {
       p <- p + stat_compare_means(
         comparisons = comparisons,
-        method = "t.test",
+        method = "wilcox.test",
         label = "p.format",
         hide.ns = TRUE
       )
