@@ -1101,21 +1101,6 @@ server <- function(input, output, session) {
     }
     
   })
-  # 显示污染矩阵(不显示）) ----
-  # output$data_marker_erythrocyte <- renderDT({
-  #   req(result_check())
-  #   datatable(result_check()$data$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
-  # })
-  # output$data_marker_coagulation <- renderDT({
-  #   req(result_check())
-  #   datatable(result_check()$data$coagulation, options = list(pageLength = 10))  # 每页显示 10 行
-  # })
-  # output$data_marker_platelet <- renderDT({
-  #   req(result_check())
-  #   datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
-  # })
-  # 
-  
   
   # corrected_plot 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
