@@ -35,15 +35,18 @@ data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/grou
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 
 ## IPX0002802000 ----
-df <- read.csv("./tests/IPX0002802000/data_IPX0002802000.csv")
+df <- read.csv("./tests/IPX0001176000/data_IPX0001176000.csv")
 rownames(df) <- df[, 1]  # 将第一列设置为行名
 df <- df[, -1, drop = FALSE]  # 删除第一列
 df
-data_group <- read.csv("./tests/IPX0002802000/data_group_IPX0002802000.csv")
+data_group <- read.csv("./tests/IPX0001176000/data_group_IPX0001176000.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # data check ----
 
 result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9)
+result <- plot_expression_correlation(exprMatrix = result_check$correlation$platelet$r,
+                                      displayNumbers = T,input_type = "correlation")
+
 
 result_correct <- data_correct(data = result_check,
                                type = c("coagulation","erythrocyte","platelet"),

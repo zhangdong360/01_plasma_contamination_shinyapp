@@ -1,25 +1,31 @@
-#' 表达矩阵相关性分析及可视化
+#' Expression correlation analysis and visualization
 #'
-#' @param exprMatrix 输入矩阵或相关系数矩阵
-#' @param input_type 输入类型（"matrix"/"correlation"，默认"matrix"）
-#' @param corMethod 相关系数计算方法（仅当input_type="matrix"时生效）
-#' @param colors 颜色梯度（默认蓝白红渐变）
-#' @param displayNumbers 是否显示相关系数值
-#' @param title 图像标题
-#' @param cluster_rows 是否对行聚类
-#' @param cluster_cols 是否对列聚类
-#' @return 返回相关系数矩阵和热图对象
+#' @param exprMatrix Input matrix or correlation matrix
+#' @param input_type Input type ("matrix"/"correlation", default "matrix")
+#' @param corMethod Correlation calculation method (only when input_type="matrix")
+#' @param colors Color gradient (default blue-white-red)
+#' @param displayNumbers Whether to display correlation values
+#' @param title Plot title
+#' @param cluster_rows Whether to cluster rows
+#' @param cluster_cols Whether to cluster columns
+#' @return Returns correlation matrix and heatmap object
 #' @export
 #'
 #' @examples
-#' # 示例1：输入数据矩阵
-#' expr <- matrix(rnorm(1000), nrow=100, dimnames=list(paste0("Gene",1:100), paste0("Sample",1:10)))
+#' # Example 1: Input data matrix
+#' expr <- matrix(rnorm(1000), nrow=100, 
+#'               dimnames=list(paste0("Gene",1:100), paste0("Sample",1:10)))
 #' plot_expression_correlation(expr, input_type = "matrix")
 #'
-#' # 示例2：直接输入相关系数矩阵
+#' # Example 2: Input pre-computed correlation matrix
 #' cor_matrix <- cor(expr)
-#' plot_expression_correlation(cor_matrix, input_type = "correlation", title = "Pre-computed Correlation")
-
+#' plot_expression_correlation(cor_matrix, 
+#'                           input_type = "correlation", 
+#'                           title = "Pre-computed Correlation")
+#' 
+#' # Example 3: Small matrix (auto-disable clustering)
+#' small_matrix <- matrix(rnorm(4), nrow=2)
+#' plot_expression_correlation(small_matrix)
 plot_expression_correlation <- function(exprMatrix,
                                         input_type = "matrix",
                                         corMethod = "pearson",
@@ -29,26 +35,41 @@ plot_expression_correlation <- function(exprMatrix,
                                         cluster_rows = TRUE,
                                         cluster_cols = TRUE) {
   
-  # 检查必要包
+  # Check required packages
   if (!requireNamespace("pheatmap", quietly = TRUE)) {
-    stop("Please install the package first: install.packages('pheatmap')")
+    stop("Package 'pheatmap' is required: install.packages('pheatmap')")
   }
   
-  # 根据输入类型处理数据
+  # Process data based on input type
   if (input_type == "matrix") {
-    # 计算相关系数矩阵
+    # Calculate correlation matrix
     cor_matrix <- cor(exprMatrix, method = corMethod)
   } else if (input_type == "correlation") {
-    # 直接使用输入作为相关系数矩阵
+    # Use input as correlation matrix directly
     cor_matrix <- exprMatrix
   } else {
     stop("Invalid input_type. Please use 'matrix' or 'correlation'.")
   }
   
-  # 设置显示数值
+  # Handle 1x1 matrix case
+  if (all(dim(cor_matrix) == c(1, 1))) {
+    # Create a simple plot for 1x1 matrix
+    plot(1, 1, type = "n", axes = FALSE, xlab = "", ylab = "", main = title)
+    text(1, 1, labels = paste("Correlation:","(only:",rownames(exprMatrix),")",round(cor_matrix[1,1], 2)), cex = 2)
+    return(list(correlation_matrix = cor_matrix, plot = recordPlot()))
+  }
+  
+  # Auto-handle clustering for small matrices
+  if (nrow(cor_matrix) < 3) {
+    message("Matrix too small for clustering (n < 3), disabling clustering")
+    cluster_rows <- FALSE
+    cluster_cols <- FALSE
+  }
+  
+  # Set up number display
   annotation <- if (displayNumbers) round(cor_matrix, 2) else FALSE
   
-  # 绘制热图
+  # Create heatmap
   p <- pheatmap::pheatmap(
     mat = cor_matrix,
     color = colors,
@@ -62,6 +83,6 @@ plot_expression_correlation <- function(exprMatrix,
     show_colnames = TRUE
   )
   
-  # 返回结果
+  # Return results
   return(list(correlation_matrix = cor_matrix, plot = p))
 }
