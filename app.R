@@ -787,7 +787,7 @@ server <- function(input, output, session) {
     cat(paste(ery_report, coa_report, plt_report, sep = "\n\n"))
   })
   
-  ## 显示污染水平可视化 ----
+  ## 污染marker表达情况可视化 ----
   ### CV ----
   output$cv_pre_plot <- renderPlot({
     source("./R/modules/get_cv.R")
@@ -1037,7 +1037,7 @@ server <- function(input, output, session) {
     }
     plot(result_check()$plot_contamination$coagulation)
   })
-  ## 显示标记物可视化 ----
+  ## 样本污染情况可视化 ----
   ### pre ----
   #### erythrocyte marker ----
   output$erythrocyte_marker_pre_plot <- renderPlot({
@@ -1070,40 +1070,37 @@ server <- function(input, output, session) {
   output$erythrocyte_marker_post_plot <- renderPlot({
     req(result_check())  # 确保数据存在
     req(result_correct())
+    marker <- result_check()$marker_list$erythrocyte
     source("./R/plot_protein_by_sample.R")
-    plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$erythrocyte,])
+    if (length(marker) > 0) {
+      plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$erythrocyte,])
+    }
+    
   })
   
   #### platelet marker ----
   output$platelet_marker_post_plot <- renderPlot({
     req(result_check())  # 确保数据存在
     req(result_correct())
+    marker <- result_check()$marker_list$platelet
     source("./R/plot_protein_by_sample.R")
-    plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$platelet,])
+    if (length(marker) > 0) {
+      plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$platelet,])
+    }
+    
   })
   
   #### coagulation marker ----
   output$coagulation_marker_post_plot <- renderPlot({
     req(result_check())  # 确保数据存在
     req(result_correct())
+    marker <- result_check()$marker_list$coagulation
     source("./R/plot_protein_by_sample.R")
-    plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$coagulation,])
+    if (length(marker) > 0) {
+      plot_protein_by_sample(data = result_correct()$correct_data[rownames(result_correct()$correct_data)%in%result_correct()$marker_list$coagulation,])
+    }
+    
   })
-  # 显示污染矩阵(不显示）) ----
-  # output$data_marker_erythrocyte <- renderDT({
-  #   req(result_check())
-  #   datatable(result_check()$data$erythrocyte, options = list(pageLength = 10))  # 每页显示 10 行
-  # })
-  # output$data_marker_coagulation <- renderDT({
-  #   req(result_check())
-  #   datatable(result_check()$data$coagulation, options = list(pageLength = 10))  # 每页显示 10 行
-  # })
-  # output$data_marker_platelet <- renderDT({
-  #   req(result_check())
-  #   datatable(result_check()$data$platelet, options = list(pageLength = 10))  # 每页显示 10 行
-  # })
-  # 
-  
   
   # corrected_plot 显示校正后污染水平可视化 ----
   output$corrected_plot <- renderPlot({
