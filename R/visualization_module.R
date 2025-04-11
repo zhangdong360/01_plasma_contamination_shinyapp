@@ -128,12 +128,12 @@ venn_plot <- function(set1, set2,
                       title = "Venn Diagram",
                       colors = c("#1b9e77", "#d95f02"),
                       alpha = 0.5,
-                      print.mode = c( "raw","percent"),
+                      print.mode = c("raw", "percent"),
                       save.plot = FALSE,
                       filename = "venn_diagram.png") {
+  
   # 强制退出时清理日志的保险机制
   on.exit({
-    # 更新正则表达式匹配带时间戳的日志文件
     log_files <- list.files(
       pattern = "^VennDiagram\\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\.[0-9]+\\.log$",
       ignore.case = TRUE
@@ -142,56 +142,71 @@ venn_plot <- function(set1, set2,
       suppressWarnings(file.remove(log_files))
     }
   })
+  
   # 检查并加载必要包
-  if (!require(VennDiagram)) {
+  if (!requireNamespace("VennDiagram", quietly = TRUE)) {
     install.packages("VennDiagram")
     library(VennDiagram)
   }
   
-  # 输入处理
+  # 处理输入并移除NA
   if (is.vector(set1) && is.vector(set2)) {
-    # 将向量转换为集合列表
-    universe <- unique(c(set1, set2))
     set_list <- list(
-      set1 = unique(set1),
-      set2 = unique(set2)
+      set1 = unique(na.omit(set1)),
+      set2 = unique(na.omit(set2))
     )
   } else if (is.list(set1) && length(set1) == 2) {
-    # 如果输入是列表的情况
-    set_list <- set1
-    universe <- unique(unlist(set1))
+    set_list <- lapply(set1, function(s) unique(na.omit(s)))
   } else {
     stop("输入应为两个向量或包含两个集合的列表")
   }
   
-  # 创建Venn图对象
-  venn <- VennDiagram::venn.diagram(
-    x = set_list,
-    category.names = categories,
-    filename = NULL,  # 不直接保存文件
-    output = TRUE,
-    
-    # 可视化参数
-    fill = colors,
-    alpha = alpha,
-    lty = "blank",
-    cex = 1.5,
-    cat.cex = 1.3,
-    cat.pos = c(-30, 30),
-    cat.dist = c(0.05, 0.05),
-    margin = 0.05,
-    
-    # 数值显示设置
-    print.mode = print.mode,
-    sigdigs = 2
-  )
+  # 检查空集合
+  if (any(lengths(set_list) == 0)) {
+    grid::grid.newpage()
+    grid::grid.text("No elements in one or both sets", gp = grid::gpar(fontsize = 16))
+    return(invisible(list(
+      total_unique = length(unique(unlist(set_list))),
+      overlap_count = 0,
+      overlap_elements = character(0)
+    )))
+  }
   
-  # 绘制图形
-  grid::grid.newpage()
-  grid::grid.draw(venn)
-  grid::grid.text(title, y = 0.95, gp = grid::gpar(fontsize = 16))
+  overlap <- intersect(set_list[[1]], set_list[[2]])
   
-  # 可选保存功能
+  # 统一使用draw.pairwise.venn并添加scaled参数
+  venn <- tryCatch({
+    VennDiagram::draw.pairwise.venn(
+      area1 = length(set_list[[1]]),
+      area2 = length(set_list[[2]]),
+      cross.area = length(overlap),
+      category = categories,
+      fill = colors,
+      alpha = alpha,
+      lty = "blank",
+      cex = 1.5,
+      cat.cex = 1.3,
+      cat.pos = c(-30, 30),
+      cat.dist = c(0.05, 0.05),
+      margin = 0.05,
+      print.mode = print.mode,
+      ind = FALSE,
+      scaled = TRUE  # 关键参数，允许自动调整比例
+    )
+  }, error = function(e) {
+    message("绘图错误: ", e$message)
+    return(NULL)
+  })
+  
+  if (is.null(venn)) {
+    grid::grid.newpage()
+    grid::grid.text("无法生成韦恩图", gp = grid::gpar(fontsize = 16))
+  } else {
+    grid::grid.newpage()
+    grid::grid.draw(venn)
+    grid::grid.text(title, y = 0.95, gp = grid::gpar(fontsize = 16))
+  }
+  
   if (save.plot) {
     ggplot2::ggsave(filename, plot = venn, 
                     width = 8, height = 6, 
@@ -199,22 +214,9 @@ venn_plot <- function(set1, set2,
     message("图形已保存为：", filename)
   }
   
-  log_files <- list.files(
-    pattern = "^VennDiagram\\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\.[0-9]+\\.log$",
-    ignore.case = TRUE
-  )
-  if (length(log_files)) {
-    tryCatch(
-      file.remove(log_files),
-      warning = function(w) message("Warning during log cleanup: ", w),
-      error = function(e) message("Error during log cleanup: ", e)
-    )
-  }
-  # 返回交集信息
-  overlap <- intersect(set_list[[1]], set_list[[2]])
-  return(invisible(list(
-    total_unique = length(universe),
+  invisible(list(
+    total_unique = length(unique(unlist(set_list))),
     overlap_count = length(overlap),
     overlap_elements = overlap
-  )))
+  ))
 }

@@ -194,9 +194,10 @@ ggplot(result_cv,aes(x = type , y = CV, fill = type )) +
 
 # VN图测试----
 # 生成示例数据
-group1 <- letters[1:6]  # a-j
-group2 <- letters[5:15]  # e-o
-
+group1 <- read.csv("tests/IPX0006609000/de_results.csv")
+group2 <- read.csv("tests/IPX0006609000/de_results_post.csv")
+group1 <- group1[group1$significant%in%T,"Protein"]
+group2 <- group2[group2$significant%in%T,"Protein"]
 # 基本使用
 result <- venn_plot(group1, group2)
 
@@ -210,7 +211,40 @@ venn_plot(
   alpha = 0.6,
   print.mode = "raw"
 )
-
+venn_plot (  set1 = group1,
+             set2 = group2, 
+           categories = c("Set A", "Set B"),
+           title = "Venn Diagram",
+           colors = c("#1b9e77", "#d95f02"),
+           alpha = 0.5,
+           print.mode = c("raw", "percent"),
+           save.plot = FALSE,
+           filename = "venn_diagram.png")
+venn_plot(
+  set1 = group1,
+  set2 = group2, 
+  categories = c("post", "pre"),
+  title = "Two differences analysed results",
+  colors = c("#4daf4a", "#984ea3"),
+  alpha = 0.6,
+  print.mode = "raw"
+)
+venn <- VennDiagram::venn.diagram(
+  x = list(set1 = group1,set = group2),
+  category.names = categories,
+  filename = NULL,
+  output = TRUE,
+  fill = colors,
+  alpha = alpha,
+  lty = "blank",
+  cex = 1.5,
+  cat.cex = 1.3,
+  cat.pos = c(-30, 30),
+  cat.dist = c(0.05, 0.05),
+  margin = 0.05,
+  print.mode = print.mode,
+  sigdigs = 2
+)
 # 查看交集信息
 cat("总唯一元素数量:", result$total_unique, "\n")
 cat("重叠元素数量:", result$overlap_count, "\n")
