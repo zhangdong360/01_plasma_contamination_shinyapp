@@ -159,7 +159,7 @@ data_correct <- function(data,
       x_coagu <- smpl2$coagulation
       Constraint_factor_plate <- result_cor_platelet[colnames(y),"avg"]
       Constraint_factor_coagu <- result_cor_coagulation[colnames(y),"avg"]
-      a <- summary(rlm(log2(y + 1) ~ x_eryth + x_plate + x_coagu, maxit = 30))
+      a <- summary(rlm(log2(y + 1) ~ x_plate + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
       }
