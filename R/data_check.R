@@ -1,4 +1,4 @@
-data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
+data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
                        group1 = NULL, group2 = NULL,
                        custom_erythrocyte = NULL,
                        custom_coagulation = NULL,
@@ -16,37 +16,51 @@ data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
   library(tidyr)
   library(dplyr)
   library(stringr)
-  
   # 检查输入数据的有效性
-  if (!all(data_group$id %in% colnames(data))) {
-    stop("Error: data_group中的id列与data的列名不匹配。")
+  if (DE_filter == T && is.null(data_group)) {
+    stop("当DE_filter为TRUE时，必须提供data_group参数")
   }
   
+  if (!is.null(data_group) && !all(data_group$id %in% colnames(data))) {
+    stop("Error: data_group中的id列与data的列名不匹配。")
+  }
   # 定义分析标记物的函数
   # Function to filter markers and perform analysis
+  # 删除生物学分组中有差异的marker
   analyze_markers <- function(data = data_ggplot, marker_list, title) {
-    # 删除生物学分组中有差异的marker
     target_proteins <- marker_list$GN
     pattern <- paste0("\\b(", paste(target_proteins, collapse = "|"), ")\\b")
     data_filtered <- data_ggplot %>% filter(str_detect(key, pattern))
     
-    # 绘制并保存箱线图
-    p <- ggplot(data_filtered, aes(x = key, y = log2(value + 1), fill = group)) + 
-      geom_boxplot() +
-      theme_classic() +
-      stat_compare_means(aes(group = group), label = "p.signif", method = "wilcox.test", size = 3) + 
-      theme(axis.text.x = element_text(angle = 90, hjust = 1, colour = "black", size = 10),
-            axis.text.y = element_text(hjust = 1, colour = "black", size = 10),
-            plot.title = element_text(hjust = 0.5)) +
-      labs(title = title)
+    # 根据是否有分组采用不同的绘图方式
+    if (!is.null(data_group) && DE_filter == TRUE) {
+      p <- ggplot(data_filtered, aes(x = key, y = log2(value + 1), fill = group)) + 
+        geom_boxplot() +
+        theme_classic() +
+        stat_compare_means(aes(group = group), label = "p.signif", method = "wilcox.test", size = 3) + 
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, colour = "black", size = 10),
+              axis.text.y = element_text(hjust = 1, colour = "black", size = 10),
+              plot.title = element_text(hjust = 0.5)) +
+        labs(title = title)
+      
+      # 提取统计结果
+      ggplot_build_obj <- ggplot_build(p)
+      stat_results <- ggplot_build_obj$data[[2]]
+      stat_results_with_keys <- data_filtered %>% distinct(key) %>% bind_cols(stat_results)
+      keys_with_high_pvalue <- stat_results_with_keys %>% filter(p > 0.05) %>% pull(key)
+    } else if (is.null(data_group) || DE_filter == FALSE){
+      p <- ggplot(data_filtered, aes(x = key, y = log2(value + 1))) + 
+        geom_boxplot(fill = "lightblue") +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, colour = "black", size = 10),
+              axis.text.y = element_text(hjust = 1, colour = "black", size = 10),
+              plot.title = element_text(hjust = 0.5)) +
+        labs(title = paste(title, "(no group matrix)"))
+      
+      keys_with_high_pvalue <- unique(data_filtered$key)  # 无分组时保留所有marker
+    }
     
-    # 提取统计结果
-    ggplot_build_obj <- ggplot_build(p)
-    stat_results <- ggplot_build_obj$data[[2]]
-    stat_results_with_keys <- data_filtered %>% distinct(key) %>% bind_cols(stat_results)
-    keys_with_high_pvalue <- stat_results_with_keys %>% filter(p > 0.05) %>% pull(key)
-    
-    return(list(data = data_filtered, keys_with_high_pvalue = keys_with_high_pvalue,plot = p))
+    return(list(data = data_filtered, keys_with_high_pvalue = keys_with_high_pvalue, plot = p))
   }
   
   # 定义相关性分析函数
@@ -123,13 +137,6 @@ data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
   }
 
   # Mann panel data input ----
-  library(readxl)
-  library(ggplot2)
-  library(ggpubr)
-  library(tidyr)
-  library(dplyr)
-  library(stringr)
-  
   result <- list()
   result$rawdata <- data
   result$group <- data_group
@@ -186,7 +193,14 @@ data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
   # 转换数据格式
   data <- as.data.frame(t(data))
   data$id <- rownames(data)
-  data_merge <- merge(data_group, data, by = "id")
+  
+  # 处理无分组情况
+  if (is.null(data_group)) {
+    data_merge <- data
+    data_merge$group <- "all_samples"  # 添加虚拟分组
+  } else {
+    data_merge <- merge(data_group, data, by = "id")
+  }
   data <- subset(data,select = -c(id))
   # 转换为长格式
   data_ggplot <- tidyr::gather(data_merge,
@@ -196,6 +210,7 @@ data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
   
   ## Perform analysis for erythrocyte, platelet, and coagulation markers ----
   ## 删除红细胞、血小板和凝血中在分组间存在差异的标记物 ----
+  
   erythrocyte_results <- analyze_markers(data_ggplot, list_erythrocyte,
                                          "Erythrocyte marker")
   platelet_results <- analyze_markers(data_ggplot, list_platelet, 
@@ -217,6 +232,7 @@ data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
   
   ## Filter markers based on p-value and correlation ----
   # 过滤标记物
+
   filtered_keys_erythrocyte <- filter_markers(erythrocyte_results$keys_with_high_pvalue,
                                               corr_matrix_erythrocyte$r)
   filtered_keys_platelet <- filter_markers(platelet_results$keys_with_high_pvalue, 
@@ -270,11 +286,6 @@ data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
     plot_contamination = list(erythrocyte = erythrocyte_results$plot,
                               coagulation = coagulation_results$plot,
                               platelet = platelet_results$plot),
-    gene = list(
-      erythrocyte = erythrocyte_results$keys_with_high_pvalue,
-      coagulation = coagulation_results$keys_with_high_pvalue,
-      platelet = platelet_results$keys_with_high_pvalue
-    ),
     missing_genes = list(missing_erythrocyte_genes = missing_erythrocyte_genes,
                          missing_coagulation_genes = missing_coagulation_genes,
                          missing_platelet_genes = missing_platelet_genes),
