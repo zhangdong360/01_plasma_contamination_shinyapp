@@ -87,9 +87,17 @@ ui <- fluidPage(
                                         fileInput("group_file", "Upload Group Info File (CSV)", 
                                                   accept = ".csv")
                                       ),
-                                      h3("Grouping settings"),
-                                      selectInput("group1", "Group 1", choices = NULL),
-                                      selectInput("group2", "Group 2", choices = NULL),
+                                      # 新增去除生物学差异选项
+                                      checkboxInput("remove_biological_diff", 
+                                                    "Remove proteins with biological differences between groups", 
+                                                    value = TRUE),
+                                      # 条件面板控制分组设置显示
+                                      conditionalPanel(
+                                        condition = "input.remove_biological_diff == true",
+                                        h3("Grouping settings"),
+                                        selectInput("group1", "Group 1", choices = NULL),
+                                        selectInput("group2", "Group 2", choices = NULL)
+                                      ),
                                       sliderInput("cor_cutoff", "Correlation Cutoff",
                                                   min = 0.5, max = 0.99, value = 0.9, step = 0.01),
                                       actionButton("run_check", "Run Data Check")
@@ -222,7 +230,15 @@ ui <- fluidPage(
               # DE & enrichment
               tabPanel("Step 4: Differential Expression",
                        sidebarLayout(
-                         sidebarPanel(h3("Step 4: DE Analysis")),
+                         sidebarPanel(
+                           h3("Step 4: DE Analysis"),
+                           # Add conditional message when remove_biological_diff is FALSE
+                           conditionalPanel(
+                             condition = "input.remove_biological_diff == false",
+                             div(style = "color: red; font-weight: bold;",
+                                 "Please upload grouping file and check 'Remove proteins with biological differences' in Step 1 to perform differential expression analysis.")
+                           )
+                         ),
                          mainPanel(tabsetPanel(
                            tabPanel("Raw Data Results",
                                     downloadButton("download_de_pre", "Download Raw DE Results"),
@@ -422,7 +438,7 @@ server <- function(input, output, session) {
       df[, -1, drop = FALSE]
     }
   })
-  
+  ### data_group
   data_group <- reactive({
     if (input$data_source == "example") {
       example_group()
@@ -457,19 +473,37 @@ server <- function(input, output, session) {
       showNotification("Group file is missing 'group' column!", type = "error")
       return()
     }
-    updateSelectInput(session, "group1", choices = unique(data_group()$group))
-    updateSelectInput(session, "group2", choices = unique(data_group()$group))
+    
+    # 只有当用户选择去除生物学差异时才更新分组选择
+    if (input$remove_biological_diff) {
+      updateSelectInput(session, "group1", choices = unique(data_group()$group))
+      updateSelectInput(session, "group2", choices = unique(data_group()$group))
+    }
   })
-  
+  ## 更新DE analysis可使用条件 ----
+  # Disable/enable DE button based on remove_biological_diff checkbox
+
   ## 数据检查 ----
   ### 数据检查（封装函数）----
   run_data_check <- function() {
     source("./R/data_check.R", local = TRUE)
     showModal(modalDialog("Running data check, please wait...", footer = NULL))
-    req(data(), data_group(), input$group1, input$group2)
+    # 根据用户选择决定是否传递分组信息
+    if (input$remove_biological_diff && !is.null(input$group1)) {
+      group1 <- input$group1
+      group2 <- input$group2
+      data_group <- data_group()
+      DE_filter <- TRUE
+    } else {
+      group1 <- NULL
+      group2 <- NULL
+      data_group <- NULL
+      DE_filter <- FALSE
+    }
     check_result <- data_check(
       data = data(),
-      data_group = data_group(),
+      data_group = data_group,
+      DE_filter = DE_filter,
       cutoff = cor_cutoff(),
       group1 = input$group1,
       group2 = input$group2,
@@ -600,6 +634,18 @@ server <- function(input, output, session) {
  
   ## 差异表达分析 ----
   observeEvent(input$run_de, {
+    # First check if remove_biological_diff is checked
+    if (!isTRUE(input$remove_biological_diff)) {
+      showModal(modalDialog(
+        title = "Warning",
+        "Please check 'Remove proteins with biological differences between groups' in Step 1 to perform differential expression analysis.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      return()  # Exit the observer without running DE analysis
+    }
+    
+    # Proceed with DE analysis only if remove_biological_diff is checked
     source("./R/de_analysis_module.R")
     req(result_correct())
     showModal(modalDialog("Running differential expression analysis, please wait...", footer = NULL))

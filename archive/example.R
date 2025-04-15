@@ -43,7 +43,7 @@ data_group <- read.csv("./tests/IPX0001176000/data_group_IPX0001176000.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # data check ----
 
-result_check <- data_check(data = df,data_group = data_group,cutoff = 0.9,DE_filter = F)
+result_check <- data_check(data = df,cutoff = 0.9,DE_filter = F)
 result <- plot_expression_correlation(exprMatrix = result_check$correlation$platelet$r,
                                       displayNumbers = T,input_type = "correlation")
 
