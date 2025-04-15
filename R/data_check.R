@@ -1,4 +1,4 @@
-data_check <- function(data, data_group, cutoff = 0.9, 
+data_check <- function(data, data_group, cutoff = 0.9, DE_filter = T,
                        group1 = NULL, group2 = NULL,
                        custom_erythrocyte = NULL,
                        custom_coagulation = NULL,
@@ -24,7 +24,7 @@ data_check <- function(data, data_group, cutoff = 0.9,
   
   # 定义分析标记物的函数
   # Function to filter markers and perform analysis
-  analyze_markers <- function(data = data_ggplot, marker_list, title, filename_marker) {
+  analyze_markers <- function(data = data_ggplot, marker_list, title) {
     # 删除生物学分组中有差异的marker
     target_proteins <- marker_list$GN
     pattern <- paste0("\\b(", paste(target_proteins, collapse = "|"), ")\\b")
@@ -195,16 +195,13 @@ data_check <- function(data, data_group, cutoff = 0.9,
                                -c("id", "group"))
   
   ## Perform analysis for erythrocyte, platelet, and coagulation markers ----
-  # 分析红细胞、血小板和凝血标记物
+  ## 删除红细胞、血小板和凝血中在分组间存在差异的标记物 ----
   erythrocyte_results <- analyze_markers(data_ggplot, list_erythrocyte,
-                                         "Erythrocyte marker", 
-                                         "/boxplot_Erythrocyte_markers")
+                                         "Erythrocyte marker")
   platelet_results <- analyze_markers(data_ggplot, list_platelet, 
-                                      "Platelet marker",
-                                      "/boxplot_Platelet_markers")
+                                      "Platelet marker")
   coagulation_results <- analyze_markers(data_ggplot, list_coagulation, 
-                                         "Coagulation marker", 
-                                         "/boxplot_Coagulation_markers")
+                                         "Coagulation marker")
   
   ## Perform correlation analysis ----
   # 相关性分析
