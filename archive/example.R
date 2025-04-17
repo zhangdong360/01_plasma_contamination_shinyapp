@@ -44,6 +44,7 @@ rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # data check ----
 
 result_check <- data_check(data = df,cutoff = 0.9,DE_filter = F)
+result_check$plot_marker$erythrocyte
 result <- plot_expression_correlation(exprMatrix = result_check$correlation$platelet$r,
                                       displayNumbers = T,input_type = "correlation")
 
@@ -80,10 +81,10 @@ result_cv$type <- factor(result_cv$type,
 ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
   geom_violin() +
   geom_boxplot(fill = "white",width = 0.2) +
-  scale_fill_manual(values = c("coagulation" = "#E64B35FF",
-                               "erythrocyte" = "#F39B7FFF",
-                               "platelet" = "#7E6148FF",
-                               "other protein" = "#3C5488FF")) +
+  scale_fill_manual(values = c("coagulation" = "#e88d2f",
+                               "erythrocyte" = "#822d4a",
+                               "platelet" = "#006699",
+                               "other protein" = "#77C2F3")) +
   stat_compare_means(comparisons = list(c("other protein","coagulation"),
                                         c("other protein","erythrocyte"),
                                         c("other protein","platelet"))) + 

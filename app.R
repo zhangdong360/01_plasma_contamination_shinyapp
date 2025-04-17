@@ -1,8 +1,4 @@
 # to do list ---- 
-# 1. 将校正后的相关分布叠加矫正前的相关分布
-# 2. 修正矫正函数
-# 3.marker 转为 radio，再比较看 marker 的 CV 值来判断污染
-# 4. 增加enrichment analysis
 library(shiny)
 library(ggplot2)
 library(ggsignif)
@@ -87,6 +83,7 @@ ui <- fluidPage(
                                         fileInput("group_file", "Upload Group Info File (CSV)", 
                                                   accept = ".csv")
                                       ),
+                                      h3("Grouping settings"),
                                       # 新增去除生物学差异选项
                                       checkboxInput("remove_biological_diff", 
                                                     "Remove proteins with biological differences between groups", 
@@ -94,7 +91,6 @@ ui <- fluidPage(
                                       # 条件面板控制分组设置显示
                                       conditionalPanel(
                                         condition = "input.remove_biological_diff == true",
-                                        h3("Grouping settings"),
                                         selectInput("group1", "Group 1", choices = NULL),
                                         selectInput("group2", "Group 2", choices = NULL)
                                       ),
@@ -1180,7 +1176,7 @@ server <- function(input, output, session) {
       set2 = result_de_pre()[result_de_pre()$significant == TRUE,"Protein"],
       categories = c("post", "pre"),
       title = "Two differences analysed results",
-      colors = c("#4daf4a", "#984ea3"),
+      colors = c("#ae6b81", "#6982b9"),
       alpha = 0.6,
       print.mode = "raw"
     )
