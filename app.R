@@ -1,4 +1,4 @@
-# to do list ---- 
+# input packages ---- 
 library(shiny)
 library(ggplot2)
 library(ggsignif)
@@ -7,6 +7,7 @@ library(tidyr)
 library(dplyr)
 library(readxl)
 library(DT)
+options(shiny.maxRequestSize=30*1024^2)
 # 定义 UI ----
 ui <- fluidPage(
   titlePanel("Plasma Protein Contamination Correction and Differential Expression Analysis"),
@@ -16,7 +17,7 @@ ui <- fluidPage(
                        # 外层容器：确保内容整体居中
                        div(style = "display: flex; justify-content: center; width: 100%;",
                            # 内容区域：固定最大宽度并左对齐
-                           div(style = "max-width: 900px; width: 90%; text-align: left; padding: 20px;",
+                           div(style = "max-width: 900px; width: 100%; text-align: left; padding: 20px;",
                                
                                # 标题（居中显示）
                                h2("Welcome to Plasma Protein Analysis Tool", 
@@ -24,7 +25,7 @@ ui <- fluidPage(
                                
                                # 图片（居中显示但内容左对齐）
                                div(style = "text-align: center; margin: 20px 0;",
-                                   img(src = "Welcome.png", 
+                                   img(src = "Welcome_2.png", 
                                        style = "max-width: 100%; height: auto; border-radius: 8px;")
                                ),
                                
