@@ -26,14 +26,41 @@ rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # df <- subset(df,select = -c(From,To))  # 删除第一列
 # df
 # write.csv(df,file = "../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
-
+## COVID-19 ----
 df <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/data_matrix_input.csv")
 rownames(df) <- df[, 1]  # 将第一列设置为行名
 df <- df[, -1, drop = FALSE]  # 删除第一列
 df
 data_group <- read.csv("../01_plasma_contamination/01_rawdata/data_COVID_19/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
-
+## AD ----
+df <- read.csv("../01_plasma_contamination/05_resource/AD/raw_data_aggr(1).csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
+data_group <- read.csv("../01_plasma_contamination/05_resource/AD/group(1).csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+## DC ----
+df <- read.csv("../01_plasma_contamination/05_resource/DC/data_PXD046288.csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
+data_group <- read.csv("../01_plasma_contamination/05_resource/DC/data_group_PXD046288.csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+## IPX0005210000(血清数据集) ----
+df <- read.csv("../01_plasma_contamination/05_resource/IPX0005210000/data_IPX0005210000.csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
+data_group <- read.csv("../01_plasma_contamination/05_resource/IPX0005210000/data_group_IPX0005210000.csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+## IPX0008390000(血清数据集) ----
+df <- read.csv("../01_plasma_contamination/05_resource/IPX0008390000/data_IPX0008390000.csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
+data_group <- read.csv("../01_plasma_contamination/05_resource/IPX0008390000/data_group_IPX0008390000.csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 ## IPX0002802000 ----
 df <- read.csv("./tests/IPX0001176000/data_IPX0001176000.csv")
 rownames(df) <- df[, 1]  # 将第一列设置为行名
@@ -41,9 +68,20 @@ df <- df[, -1, drop = FALSE]  # 删除第一列
 df
 data_group <- read.csv("./tests/IPX0001176000/data_group_IPX0001176000.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
+# data test ----
+df <- read.csv("C:/Users/MSI/Desktop/test_3.csv")
+rownames(df) <- df[, 1]  # 将第一列设置为行名
+df <- df[, -1, drop = FALSE]  # 删除第一列
+df
+data_group <- read.csv("./tests/group.csv")
+rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # data check ----
 
+result_check <- data_check(data = df,cutoff = 0.9,DE_filter = T,data_group = data_group,group1 = "PPD",group2 = "C")
+
 result_check <- data_check(data = df,cutoff = 0.9,DE_filter = F)
+
+result_check_optimized <- data_check_optimized(data = df,cutoff = 0.9,DE_filter = F)
 result_check$plot_marker$erythrocyte
 result <- plot_expression_correlation(exprMatrix = result_check$correlation$platelet$r,
                                       displayNumbers = T,input_type = "correlation")
@@ -99,7 +137,7 @@ ggplot(result_cv,aes(x = type , y = CV, fill = type)) +
 
 
 result_check$data
-result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(result_check$rawdata)), type = "pearson")
+result_cor <- Hmisc::rcorr(as.matrix(t(result_check$rawdata)), type = "pearson")
 result_cor <- as.data.frame(result_cor$r)
 
 result_cor_erythrocyte <- abs(result_cor[,colnames(result_cor)%in%c(result_check$marker_list$erythrocyte)])
@@ -126,9 +164,16 @@ for (i in 1:dim(result_cor_platelet)[1]) {
 
 
 ## 相关性分析 ----
-result <- plot_expression_correlation(exprMatrix = result_check$data$erythrocyte[,-1:-2],displayNumbers = T,corMethod = "pearson")
-result <- plot_expr_corrplot(exprMatrix = result_check$data$erythrocyte[,-1:-2])
+
+pdf(file = "../01_plasma_contamination/05_resource/IPX0008390000/marker_cor_platelet.pdf",width = 8,height = 6)
+result <- plot_expression_correlation(exprMatrix = result_check$marker_list$platelet$r,displayNumbers = T,input_type = "correlation")
+dev.off()
+pdf(file = "../01_plasma_contamination/05_resource/IPX0008390000/marker_cor_erythrocyte.pdf",width = 8,height = 6)
 result <- plot_expression_correlation(exprMatrix = result_check$correlation$erythrocyte$r,displayNumbers = T,input_type = "correlation")
+dev.off()
+pdf(file = "../01_plasma_contamination/05_resource/IPX0008390000/marker_cor_coagulation.pdf",width = 8,height = 6)
+result <- plot_expression_correlation(exprMatrix = result_check$correlation$coagulation$r,displayNumbers = T,input_type = "correlation")
+dev.off()
 plot_pvalue_distribution(pvalue_matrix =  result_check$correlation$erythrocyte$P)
 
 plot_stat_distribution(data =  result_check$rawdata,statistic = "correlation")

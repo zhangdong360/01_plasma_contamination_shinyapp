@@ -6,7 +6,7 @@ data_correct <- function(data,
   # 函数说明 ----
   # data为输入数据，type为矫正类型，默认为c("coagulation","erythrocyte","platelet")，表示矫正所有污染类型
   # type可以为coagulation, erythrocyte, platelet中任意几种
-  
+  # constraint_*:参数为计算约束因子的最小分位数，默认为相关系数从小到大排序，计算后95%-100%相关系数的平均数
   # 强制constraint_*参数在(0,1)范围内（包含边界检查）
   constraint_erythrocyte_original <- max(0, min(1, constraint_erythrocyte))
   constraint_platelet_original <- max(0, min(1, constraint_platelet))

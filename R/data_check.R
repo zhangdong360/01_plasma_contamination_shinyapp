@@ -65,24 +65,55 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
   
   # 定义相关性分析函数
   # Correlation analysis function
+  # correlate_markers <- function(data_filtered) {
+  #   data_spread <- spread(data_filtered, key, value)
+  #   numeric_data <- data_spread %>% dplyr::select(-id, -group)
+  #   corr_results <- Hmisc::rcorr(as.matrix(numeric_data), type = "pearson")
+  #   return(list(r = corr_results$r, P = corr_results$P))
+  # }
   correlate_markers <- function(data_filtered) {
     data_spread <- spread(data_filtered, key, value)
     numeric_data <- data_spread %>% dplyr::select(-id, -group)
+    
+    # 检查是否有足够多的蛋白进行相关性分析
+    if (ncol(numeric_data) < 2) {
+      warning(paste("Insufficient proteins for correlation analysis (only", 
+                    ncol(numeric_data), "protein available)"))
+      return(list(r = NA, P = NA, insufficient_proteins = TRUE))
+    }
+    
     corr_results <- Hmisc::rcorr(as.matrix(numeric_data), type = "pearson")
-    return(list(r = corr_results$r, P = corr_results$P))
+    return(list(r = corr_results$r, P = corr_results$P, insufficient_proteins = FALSE))
   }
   
   # 定义基于p值和相关性过滤标记物的函数
   # Filter markers based on p-value and correlation
+  # filter_markers <- function(keys_with_high_pvalue, corr_matrix_r) {
+  #   # 提取相关性高的标记物
+  #   high_corr_keys <- colnames(corr_matrix_r)[apply(corr_matrix_r, 2, function(x) any(abs(x) > cutoff & abs(x) < 1))]
+  #   filtered_keys <- intersect(keys_with_high_pvalue, high_corr_keys)
+  #   result <- list(high_corr_keys = high_corr_keys,
+  #                  filtered_keys = filtered_keys)
+  #   return(result)
+  # }
   filter_markers <- function(keys_with_high_pvalue, corr_matrix_r) {
+    # 检查相关性分析是否成功
+    if (is.na(corr_matrix_r)[1]) {
+      return(list(high_corr_keys = character(0),
+                  filtered_keys = character(0),
+                  insufficient_proteins = TRUE))
+    }
+    
     # 提取相关性高的标记物
-    high_corr_keys <- colnames(corr_matrix_r)[apply(corr_matrix_r, 2, function(x) any(abs(x) > cutoff & abs(x) < 1))]
+    high_corr_keys <- colnames(corr_matrix_r)[apply(corr_matrix_r, 2, 
+                                                    function(x) any(abs(x) > cutoff & abs(x) < 1))]
     filtered_keys <- intersect(keys_with_high_pvalue, high_corr_keys)
+    
     result <- list(high_corr_keys = high_corr_keys,
-                   filtered_keys = filtered_keys)
+                   filtered_keys = filtered_keys,
+                   insufficient_proteins = FALSE)
     return(result)
   }
-  
   # 定义绘制水平图的函数
   # Plot and save level plots for filtered markers
   plot_level <- function(data_filtered, filtered_keys, title) {
@@ -104,6 +135,37 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
   }
   
   # 收集所有统计信息
+  # analyze_markers_full <- function(data_ggplot, marker_list, analyze_markers_result, correlation_result) {
+  #   target_proteins <- marker_list$GN
+  #   data_filtered <- data_ggplot %>% 
+  #     filter(key %in% target_proteins)
+  #   
+  #   # 更健壮的方式检查基因是否存在
+  #   exists_status <- ifelse(target_proteins %in% unique(data_ggplot$key), "Pass", "NA")
+  #   
+  #   # 更安全的方式提取p值
+  #   p_values <- tryCatch({
+  #     ggplot_build_obj <- ggplot_build(analyze_markers_result$plot)
+  #     stat_data <- ggplot_build_obj$data[[2]]  # 假设统计结果在第二个图层
+  #     stat_data$p
+  #   }, error = function(e) rep(NA, length(target_proteins)))
+  #   
+  #   # 创建统计结果数据框
+  #   stats <- data.frame(
+  #     key = target_proteins,
+  #     exists = exists_status,
+  #     DE = ifelse(target_proteins %in% analyze_markers_result$keys_with_high_pvalue, 
+  #                 "Pass", "Non-removable inter-sample heterogeneity"),
+  #     correlation = ifelse(target_proteins %in% correlation_result$high_corr_keys,
+  #                          "Pass", "Low statistical correlation"),
+  #     stringsAsFactors = FALSE
+  #   )
+  #   
+  #   # 对于不存在的基因，将DE和correlation设为NA
+  #   stats[stats$exists == "NA", c("DE", "correlation")] <- NA
+  #   
+  #   return(stats)
+  # }
   analyze_markers_full <- function(data_ggplot, marker_list, analyze_markers_result, correlation_result) {
     target_proteins <- marker_list$GN
     data_filtered <- data_ggplot %>% 
@@ -125,8 +187,10 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
       exists = exists_status,
       DE = ifelse(target_proteins %in% analyze_markers_result$keys_with_high_pvalue, 
                   "Pass", "Non-removable inter-sample heterogeneity"),
-      correlation = ifelse(target_proteins %in% correlation_result$high_corr_keys,
-                           "Pass", "Low statistical correlation"),
+      correlation = ifelse(correlation_result$insufficient_proteins,
+                           "Insufficient proteins for analysis",
+                           ifelse(target_proteins %in% correlation_result$high_corr_keys,
+                                  "Pass", "Low statistical correlation")),
       stringsAsFactors = FALSE
     )
     
@@ -135,7 +199,6 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
     
     return(stats)
   }
-
   # Mann panel data input ----
   result <- list()
   result$rawdata <- data
