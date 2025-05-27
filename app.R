@@ -149,7 +149,7 @@ ui <- fluidPage(
                                      tabPanel("PCA", plotOutput("pca_pre_plot")),
                                      tabPanel("Heatmap", plotOutput("heatmap_pre_plot")),
                                      tabPanel("Boxplot", plotOutput("boxplot_pre_plot"))
-                                     ),
+                                   ),
                                    h4("Contamination Marker Expression"),
                                    tabsetPanel(
                                      tabPanel("Erythrocyte",
@@ -183,10 +183,10 @@ ui <- fluidPage(
                                      tabPanel("Erythrocyte", plotOutput("erythrocyte_marker_pre_plot")),
                                      tabPanel("Coagulation", plotOutput("coagulation_marker_pre_plot")),
                                      tabPanel("Platelet", plotOutput("platelet_marker_pre_plot"))
-                                     )
                                    )
                          )
-                       ),
+                       )
+              ),
               ## Step3 ----
               # correction
               tabPanel("Step 3: Correction Results",
@@ -248,10 +248,10 @@ ui <- fluidPage(
                              tabPanel("Venn Diagram", plotOutput("vn_plot")),
                              tabPanel("Volcano Plot (Raw)", plotOutput("volc_de_pre")),
                              tabPanel("Volcano Plot (Corrected)", plotOutput("volc_de_post"))
-                             )
                            )
                          )
-                       ),
+                       )
+              ),
               ## 在tabsetPanel中添加User Manual选项卡（Step4之后）----
               tabPanel("User Manual",
                        div(style = "padding: 20px; max-width: 1000px; margin: 0 auto;",
@@ -332,8 +332,8 @@ ui <- fluidPage(
                            )
                        )
               )
-              )
   )
+)
 
 
 
@@ -479,7 +479,7 @@ server <- function(input, output, session) {
   })
   ## 更新DE analysis可使用条件 ----
   # Disable/enable DE button based on remove_biological_diff checkbox
-
+  
   ## 数据检查 ----
   ### 数据检查（封装函数）----
   run_data_check <- function() {
@@ -531,7 +531,7 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "type_coagulation", value = TRUE)
     }
   })
-
+  
   # 当三个子项全选时自动选中"All"
   observe({
     all_selected <- all(
@@ -541,7 +541,7 @@ server <- function(input, output, session) {
     )
     updateCheckboxInput(session, "type_all", value = all_selected)
   })
-
+  
   # 获取最终选择的校正类型
   selected_types <- reactive({
     types <- c()
@@ -550,7 +550,7 @@ server <- function(input, output, session) {
     if (input$type_coagulation) types <- c(types, "coagulation")
     types
   })
-
+  
   
   output$erythrocyte_checkbox <- renderUI({
     req(result_check())
@@ -574,7 +574,7 @@ server <- function(input, output, session) {
     label <- if (length(markers) == 0) "Coagulation (no contamination)" else "Coagulation"
     checkboxInput("type_coagulation", label, 
                   value = if (length(markers) > 0) TRUE else FALSE)
-                     })
+  })
   ### 主校正函数 ----
   run_correction <- function(constraint) {
     req(result_check())
@@ -628,7 +628,7 @@ server <- function(input, output, session) {
       showNotification("Correction re-run successfully!", type = "message")
     }
   })
- 
+  
   ## 差异表达分析 ----
   observeEvent(input$run_de, {
     # First check if remove_biological_diff is checked
@@ -780,7 +780,7 @@ server <- function(input, output, session) {
     source("./R/plot_expression_correlation.R")
     req(result_check())
     result <- plot_expression_correlation(exprMatrix = result_check()$correlation$platelet$r,
-                                       displayNumbers = T,input_type = "correlation")
+                                          displayNumbers = T,input_type = "correlation")
     return(result$plot)
   },height = 400,width = 800)
   # output$cor_platelet_data <- renderDT({

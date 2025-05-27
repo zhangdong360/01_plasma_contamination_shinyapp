@@ -295,7 +295,7 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
   
   ## Filter markers based on p-value and correlation ----
   # 过滤标记物
-
+  
   filtered_keys_erythrocyte <- filter_markers(erythrocyte_results$keys_with_high_pvalue,
                                               corr_matrix_erythrocyte$r)
   filtered_keys_platelet <- filter_markers(platelet_results$keys_with_high_pvalue, 
@@ -344,8 +344,8 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
       platelet = spread(platelet_results$data, key, value)
     ),
     plot_marker = list(erythrocyte = Erythrocyte_pannel,
-                coagulation = Coagulation_pannel,
-                platelet = Platelet_pannel),
+                       coagulation = Coagulation_pannel,
+                       platelet = Platelet_pannel),
     plot_contamination = list(erythrocyte = erythrocyte_results$plot,
                               coagulation = coagulation_results$plot,
                               platelet = platelet_results$plot),

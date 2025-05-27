@@ -76,8 +76,8 @@ df
 data_group <- read.csv("./tests/group.csv")
 rownames(data_group) <- data_group[, 1]  # 将第一列设置为行名
 # data check ----
-
-result_check <- data_check(data = df,cutoff = 0.9,DE_filter = T,data_group = data_group,group1 = "PPD",group2 = "C")
+profvis::profvis(data_check(data = df,cutoff = 0.9,DE_filter = T,data_group = data_group,group1 = "AD",group2 = "Ctrl"))
+result_check <- data_check(data = df,cutoff = 0.9,DE_filter = T,data_group = data_group,group1 = "AD",group2 = "Ctrl")
 
 result_check <- data_check(data = df,cutoff = 0.9,DE_filter = F)
 
