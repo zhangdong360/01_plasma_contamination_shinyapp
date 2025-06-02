@@ -30,8 +30,31 @@ plot_stat_distribution <- function(data, type = "pearson", statistic = "pvalue",
   }
   
   # 计算相关矩阵和p值矩阵
-  test_result <- Hmisc::rcorr(as.matrix(t(data)), type = type)
-  values <- if (statistic == "pvalue") test_result$P else test_result$r
+  cor_matrix  <- Rfast::cora(as.matrix(t(data)))
+  n <- nrow(t(data))
+  t_stats <- cor_matrix  * sqrt((n - 2) / (1 - cor_matrix ^2))
+  p_values <- 2 * pt(abs(t_stats), df = n - 2, lower.tail = FALSE)
+  rownames(p_values) <- rownames(cor_matrix)
+  colnames(p_values) <- colnames(cor_matrix)
+  diag(p_values) <- NA
+  test_result <- list(r = cor_matrix,
+                      P = p_values)
+  # test_result <- Hmisc::rcorr(as.matrix(t(data)), type = type)
+  if (statistic == "pvalue") {
+    # 计算相关矩阵和p值矩阵
+    cor_matrix  <- Rfast::cora(as.matrix(t(data)))
+    n <- nrow(t(data))
+    t_stats <- cor_matrix  * sqrt((n - 2) / (1 - cor_matrix ^2))
+    p_values <- 2 * pt(abs(t_stats), df = n - 2, lower.tail = FALSE)
+    rownames(p_values) <- rownames(cor_matrix)
+    colnames(p_values) <- colnames(cor_matrix)
+    diag(p_values) <- NA
+    values <- p_values
+  } else {
+    # 计算相关矩阵和p值矩阵
+    cor_matrix  <- Rfast::cora(as.matrix(t(data)))
+    values <- cor_matrix
+  }
   
   # 创建绘图数据
   df <- data.frame(value = values[upper.tri(values)])

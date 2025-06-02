@@ -32,11 +32,6 @@ data_correct <- function(data,
       mean <- apply(a,2, mean, na.rm = TRUE)
       return(mean)
     }
-    # 计算污染水平
-    # list_erythrocyte <- for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,])
-    # list_platelet <- for_mean(data$rawdata[rownames(data$rawdata) %in% platelet_marker,])
-    # list_coagulation <- for_mean(data$rawdata[rownames(data$rawdata) %in% coagulation_marker,])
-    
     list_erythrocyte <-  if (any(rownames(data$rawdata) %in% erythrocyte_marker)) {
       for_mean(data$rawdata[rownames(data$rawdata) %in% erythrocyte_marker,,drop = FALSE])
     } else {
@@ -70,8 +65,10 @@ data_correct <- function(data,
   rownames(b) <- rownames(rawdata)
   colnames(b) <- colnames(smpl2)
   # 计算约束系数 ----
-  result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(data$rawdata)), type = "pearson")
-  result_cor <- as.data.frame(result_cor$r)
+  # result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(data$rawdata)), type = "pearson")
+  # result_cor <- as.data.frame(result_cor$r)
+  result_cor <- cor(as.matrix(t(data$rawdata)), method = "pearson")
+  result_cor <- as.data.frame(result_cor)
   # 初始化约束因子为 NULL
   result_cor_erythrocyte <- result_cor_platelet <- result_cor_coagulation <- NULL
   # 动态计算各类型约束因子
