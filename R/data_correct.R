@@ -47,14 +47,35 @@ data_correct <- function(data,
     } else {
       rep(NA,dim(data$rawdata)[2])
     }
+    
     components  <- data.frame(
       erythrocyte = list_erythrocyte,
       Platelet = list_platelet,
       coagulation = list_coagulation
     )
-    return(components)
+    return(components )
   }
-  
+  # 向量化计算约束因子
+  compute_constraint_factors <- function(cor_matrix, marker_set, constraint_value) {
+    if (is.null(marker_set) || length(marker_set) == 0) return(NULL)
+    
+    # 提取当前标记基因的相关系数子集
+    sub_cor <- abs(cor_matrix[, marker_set, drop = FALSE])
+    
+    # 计算每个基因的约束因子
+    constraint_factors <- apply(sub_cor, 1, function(x) {
+      n <- length(x)
+      if (n < 3) return(mean(x, na.rm = TRUE))
+      
+      # 计算起始位置
+      start_idx <- max(1, min(round(n * constraint_value), n - 2))
+      # 排序并取平均值
+      sorted_vals <- sort(x)
+      mean(sorted_vals[start_idx:(n - 1)], na.rm = TRUE)
+    })
+    
+    return(constraint_factors)
+  }
   smpl2 <- mean_2(data)
   rawdata <- as.data.frame(data$rawdata)
   ndata1 <- matrix(nrow = nrow(rawdata), ncol = ncol(rawdata))
@@ -68,56 +89,24 @@ data_correct <- function(data,
   result_cor <- as.data.frame(result_cor)
   # 初始化约束因子为 NULL
   result_cor_erythrocyte <- result_cor_platelet <- result_cor_coagulation <- NULL
-  # 动态计算各类型约束因子
-  ## ery ----
-  if (!is.null(erythrocyte_marker) && length(erythrocyte_marker) > 0) {
-    result_cor_erythrocyte <- abs(result_cor[, colnames(result_cor) %in% erythrocyte_marker, drop = FALSE])
-    result_cor_erythrocyte$avg <- NA
-    result_cor_erythrocyte <- as.matrix(result_cor_erythrocyte)
-    for (i in 1:dim(result_cor_erythrocyte)[1]) {
-      result_cor_erythrocyte <- result_cor_erythrocyte[,order(result_cor_erythrocyte[i,])]
-      if (dim(result_cor_erythrocyte)[2] < 3) {
-        result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,],na.rm = T)
-      }else if (dim(result_cor_erythrocyte)[2] > 2) {
-        start_col_erythrocyte <- min(max(round(dim(result_cor_erythrocyte)[2]*constraint_erythrocyte_original),1),
-                                     dim(result_cor_erythrocyte)[2]-2)
-        result_cor_erythrocyte[i,"avg"] <- mean(result_cor_erythrocyte[i,start_col_erythrocyte:dim(result_cor_erythrocyte)[2]-1])
-        }
-      }
-    }
-  ## cog ----
-  if (!is.null(coagulation_marker) && length(coagulation_marker) > 0) {
-    result_cor_coagulation <- abs(result_cor[, colnames(result_cor) %in% coagulation_marker, drop = FALSE])
-    result_cor_coagulation$avg <- NA
-    result_cor_coagulation <- as.matrix(result_cor_coagulation)
-    for (i in 1:dim(result_cor_coagulation)[1]) {
-      result_cor_coagulation <- result_cor_coagulation[,order(result_cor_coagulation[i,])]
-      if (dim(result_cor_coagulation)[2] < 3) {
-        result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,],na.rm = T)
-      }else if (dim(result_cor_coagulation)[2] > 2){
-        start_col_coagulation <- min(max(round(dim(result_cor_coagulation)[2]*constraint_coagulation_original),1),
-                                     dim(result_cor_coagulation)[2]-2)
-        result_cor_coagulation[i,"avg"] <- mean(result_cor_coagulation[i,start_col_coagulation:dim(result_cor_coagulation)[2]-1])
-      }
-    }
-  }
+  # 计算约束因子
+  result_cor_erythrocyte <- if (length(erythrocyte_marker) > 0) {
+    compute_constraint_factors(cor_matrix = result_cor, 
+                               erythrocyte_marker, 
+                               constraint_erythrocyte_original)
+  } else NULL
   
-  ## platelet ----
-  if (!is.null(platelet_marker) && length(platelet_marker) > 0) {
-    result_cor_platelet <- abs(result_cor[, colnames(result_cor) %in% platelet_marker, drop = FALSE])
-    result_cor_platelet$avg <- NA
-    result_cor_platelet <- as.matrix(result_cor_platelet)
-    for (i in 1:dim(result_cor_platelet)[1]) {
-      result_cor_platelet <- result_cor_platelet[,order(result_cor_platelet[i,])]
-      if (dim(result_cor_platelet)[2] < 3){
-        result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,],na.rm = T)
-      }else if (dim(result_cor_platelet)[2] > 2){
-        start_col_platelet <- min(max(round(dim(result_cor_platelet)[2]*constraint_platelet_original),1),
-                                  dim(result_cor_platelet)[2]-2)
-        result_cor_platelet[i,"avg"] <- mean(result_cor_platelet[i,start_col_platelet:dim(result_cor_platelet)[2]-1])
-      }
-    }
-  }
+  result_cor_platelet <- if (length(platelet_marker) > 0) {
+    compute_constraint_factors(cor_matrix = result_cor, 
+                               platelet_marker, 
+                               constraint_platelet_original)
+  } else NULL
+  
+  result_cor_coagulation <- if (length(coagulation_marker) > 0) {
+    compute_constraint_factors(cor_matrix = result_cor, 
+                               coagulation_marker,
+                               constraint_coagulation_original)
+  } else NULL
   
   # correct ----
   if (setequal(type, c("coagulation","erythrocyte","platelet"))) {
@@ -129,9 +118,10 @@ data_correct <- function(data,
       x_eryth <- smpl2$erythrocyte
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
-      Constraint_factor_eryth <- result_cor_erythrocyte[colnames(y),"avg"]
-      Constraint_factor_plate <- result_cor_platelet[colnames(y),"avg"]
-      Constraint_factor_coagu <- result_cor_coagulation[colnames(y),"avg"]
+      # 使用预计算的约束因子向量
+      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
+      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_plate + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -151,8 +141,8 @@ data_correct <- function(data,
       smpl2 <- smpl2[rownames(y),]
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
-      Constraint_factor_plate <- result_cor_platelet[colnames(y),"avg"]
-      Constraint_factor_coagu <- result_cor_coagulation[colnames(y),"avg"]
+      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_plate + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -171,8 +161,8 @@ data_correct <- function(data,
       smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_coagu <- smpl2$coagulation
-      Constraint_factor_eryth <- result_cor_erythrocyte[colnames(y),"avg"]
-      Constraint_factor_coagu <- result_cor_coagulation[colnames(y),"avg"]
+      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -191,8 +181,8 @@ data_correct <- function(data,
       smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_plate <- smpl2$Platelet
-      Constraint_factor_eryth <- result_cor_erythrocyte[colnames(y),"avg"]
-      Constraint_factor_plate <- result_cor_platelet[colnames(y),"avg"]
+      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
+      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_plate, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -210,13 +200,14 @@ data_correct <- function(data,
       y <- t(y)
       smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
+      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      constraint * x_eryth *a[["coefficients"]]["x_eryth","Value"]) + 
+                                      constraint * x_eryth * a[["coefficients"]]["x_eryth","Value"] * Constraint_factor_eryth) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   } else if (identical(type, "platelet")) {
@@ -226,6 +217,7 @@ data_correct <- function(data,
       y <- t(y)
       smpl2 <- smpl2[rownames(y),]
       x_plate <- smpl2$Platelet
+      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
       # x_coagu <- smpl2$coagulation
       a <- summary(rlm(log2(y + 1) ~ x_plate, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
@@ -233,7 +225,7 @@ data_correct <- function(data,
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      constraint * x_plate *a[["coefficients"]]["x_plate","Value"]) + 
+                                      constraint * x_plate * a[["coefficients"]]["x_plate","Value"] * Constraint_factor_plate) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   } else if (identical(type, "coagulation"))  {
@@ -243,13 +235,14 @@ data_correct <- function(data,
       y <- t(y)
       smpl2 <- smpl2[rownames(y),]
       x_coagu <- smpl2$coagulation
+      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
       }
       # new residuals:
       ndata1[i, ] <- log2(y + 1) - (a[["coefficients"]]["(Intercept)","Value"] + 
-                                      constraint * x_coagu *a[["coefficients"]]["x_coagu","Value"]) + 
+                                      constraint * x_coagu * a[["coefficients"]]["x_coagu","Value"] * Constraint_factor_coagu) + 
         a[["coefficients"]]["(Intercept)","Value"]
     }
   } else {
