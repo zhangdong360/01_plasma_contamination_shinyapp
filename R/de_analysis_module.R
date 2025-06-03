@@ -1,3 +1,88 @@
+#' Differential Expression Analysis using Limma for Proteomics Data
+#'
+#' Performs differential expression analysis on proteomics data using the limma package.
+#' Handles both standard proteomics data and count-based proteomics (with voom transformation).
+#'
+#' @param expr_matrix Expression matrix with proteins as rows and samples as columns
+#' @param group_matrix Data frame containing sample grouping information with two required columns:
+#'   - `id`: sample IDs matching colnames of `expr_matrix`
+#'   - `group`: biological group labels
+#' @param compare Character vector specifying the comparison groups in the format `c("numerator", "denominator")`.
+#'   Example: `c("Treatment", "Control")` calculates Treatment vs Control. If NULL, uses the first two group levels in reverse order.
+#' @param p_cutoff Significance threshold for p-values (default: 0.05)
+#' @param logFC_cutoff Minimum absolute log fold change threshold (default: 0)
+#' @param adjust_method P-value adjustment method ("BH", "bonferroni", etc., default: "BH")
+#' @param apply_voom Logical indicating whether to apply voom transformation (for count-like proteomics data, default: FALSE)
+#' @param p_type Type of p-value to use for significance:
+#'   - "raw": unadjusted p-value (default)
+#'   - "adjusted": adjusted p-value
+#'
+#' @return A data frame containing:
+#'   - Protein identifiers
+#'   - logFC: log2 fold change
+#'   - P.Value: raw p-value
+#'   - adj.P.Val: adjusted p-value
+#'   - significant: logical vector indicating significant proteins
+#'   - Other limma statistics (t-statistic, B-statistic, etc.)
+#'
+#' @details
+#' Analysis workflow:
+#' 1. Input validation: Checks sample-group matching and parameter integrity
+#' 2. Group factor creation: Matches sample groups to expression matrix columns
+#' 3. Comparison setup: Uses specified comparison or default level ordering
+#' 4. Transformation: Applies voom if requested (for count-like data)
+#' 5. Model design: Creates design matrix with 0-intercept groups
+#' 6. Contrast specification: Builds specified comparison
+#' 7. Model fitting: Linear model -> contrasts -> empirical Bayes moderation
+#' 8. Result extraction: Top table with all proteins
+#' 9. Significance marking: Based on specified p-value type and cutoffs
+#'
+#' @note
+#' - The comparison direction: `compare = c("A", "B")` means A vs B (logFC > 0 indicates upregulation in A)
+#' - For proteomics data, `apply_voom = TRUE` is only needed for spectral count-type data
+#' - The design matrix uses 0-intercept (~0 + group) for direct group mean parameterization
+#'
+#' @examples
+#' \dontrun{
+#' # Example expression matrix (10 proteins x 6 samples)
+#' expr_data <- matrix(rnorm(60), nrow = 10, 
+#'                    dimnames = list(paste0("Protein", 1:10),
+#'                                   paste0("Sample", 1:6)))
+#' 
+#' # Group information
+#' group_info <- data.frame(
+#'   id = paste0("Sample", 1:6),
+#'   group = rep(c("Control", "Treatment"), each = 3)
+#' )
+#'
+#' # Run analysis
+#' deg_results <- limma_proteomics_analysis(
+#'   expr_matrix = expr_data,
+#'   group_matrix = group_info,
+#'   compare = c("Treatment", "Control"),
+#'   p_cutoff = 0.05,
+#'   logFC_cutoff = 1,
+#'   adjust_method = "BH",
+#'   apply_voom = FALSE
+#' )
+#'
+#' # View significant results
+#' subset(deg_results, significant)
+#' }
+#'
+#' @importFrom limma voom lmFit makeContrasts contrasts.fit eBayes topTable
+#' @importFrom stats model.matrix
+#' @export
+limma_proteomics_analysis <- function(expr_matrix, 
+                                      group_matrix, 
+                                      compare = NULL, 
+                                      p_cutoff = 0.05, 
+                                      logFC_cutoff = 0, 
+                                      adjust_method = "BH", 
+                                      apply_voom = FALSE,
+                                      p_type = "raw") {
+  # [Function implementation remains unchanged]
+}
 limma_proteomics_analysis <- function(expr_matrix, 
                                       group_matrix, 
                                       compare = NULL, 

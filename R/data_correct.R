@@ -1,3 +1,76 @@
+#' Correct Proteomics Data for Contamination Effects
+#'
+#' Performs contamination correction on proteomics data using robust linear regression and constraint factors.
+#' Supports correction for erythrocyte, platelet, and coagulation contamination either individually or in combination.
+#'
+#' @param data List containing raw expression data (from `data_check()` output) with components:
+#'   - `rawdata`: Expression matrix (proteins as rows, samples as columns)
+#' @param type Vector of contamination types to correct for. Options: 
+#'   "erythrocyte", "platelet", "coagulation". Can specify multiple types.
+#' @param constraint Global constraint factor to control correction strength (default: 1)
+#' @param erythrocyte_marker Character vector of erythrocyte marker genes
+#' @param constraint_erythrocyte Quantile threshold for erythrocyte constraint factor calculation (0-1, default: 0.95)
+#' @param coagulation_marker Character vector of coagulation marker genes
+#' @param constraint_coagulation Quantile threshold for coagulation constraint factor calculation (0-1, default: 0.95)
+#' @param platelet_marker Character vector of platelet marker genes
+#' @param constraint_platelet Quantile threshold for platelet constraint factor calculation (0-1, default: 0.95)
+#'
+#' @return Updated list containing:
+#'   - `rawdata`: Original expression matrix
+#'   - `correct_data`: Corrected expression matrix
+#'   - `contamination_level`: Contamination score matrix (erythrocyte, platelet, coagulation)
+#'   - Other components from input `data`
+#'
+#' @details
+#' Correction workflow:
+#' 1. Validates constraint parameters (0-1 range)
+#' 2. Computes contamination scores for each type:
+#'    - Log2 transforms expression
+#'    - Centers marker expression by row means
+#'    - Averages centered values by column (sample)
+#' 3. Computes protein-wise constraint factors:
+#'    - Calculates Pearson correlation matrix
+#'    - For each protein, takes mean of top (constraint_*) fraction of correlations to markers
+#' 4. Performs robust linear regression (MASS::rlm):
+#'    - Response: Protein expression (log2)
+#'    - Predictors: Contamination scores
+#'    - Incorporates constraint factors as weights
+#' 5. Calculates residuals and transforms back to linear space
+#' 
+#' Mathematical representation:
+#' \deqn{\text{Corrected} = 2^{(\text{log2}(y + 1) - \beta \cdot \text{Constraint} \cdot X)} - 1}
+#' Where:
+#'   - y = original expression
+#'   - β = regression coefficient
+#'   - Constraint = constraint factor vector
+#'   - X = contamination scores
+#'
+#' @note
+#' - Requires MASS package
+#' - Handles missing markers gracefully (returns NA for missing components)
+#' - Uses robust regression to handle outliers
+#' - Constraint factors range 0-1 (1 = full correction)
+#'
+#' @examples
+#' \dontrun{
+#' # After running data_check()
+#' corrected_data <- data_correct(
+#'   data = qc_result,
+#'   type = c("erythrocyte", "platelet"),
+#'   constraint = 0.8,
+#'   erythrocyte_marker = c("HBA1", "HBB"),
+#'   platelet_marker = c("PF4", "PPBP"),
+#'   constraint_erythrocyte = 0.9,
+#'   constraint_platelet = 0.85
+#' )
+#' 
+#' # Access corrected data
+#' corrected_matrix <- corrected_data$correct_data
+#' }
+#'
+#' @importFrom MASS rlm
+#' @importFrom stats cor
+#' @export
 data_correct <- function(data, 
                          type = c("coagulation","erythrocyte","platelet"),constraint = 1,
                          erythrocyte_marker,constraint_erythrocyte = 0.95,

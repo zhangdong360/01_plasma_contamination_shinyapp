@@ -1,3 +1,80 @@
+#' Quality Control for Contamination Markers in Proteomics Data
+#'
+#' Performs quality control analysis for erythrocyte, platelet, and coagulation contamination markers 
+#' in proteomics data. Identifies non-differentially expressed markers with high correlation to 
+#' detect potential sample contamination issues.
+#'
+#' @param data Expression data matrix with proteins as rows and samples as columns
+#' @param data_group Sample group information data frame (must contain 'id' and 'group' columns)
+#' @param cutoff Correlation threshold for identifying highly correlated markers (default: 0.9)
+#' @param DE_filter Whether to filter differentially expressed markers between groups (default: TRUE)
+#' @param group1 First comparison group for DE analysis (optional)
+#' @param group2 Second comparison group for DE analysis (optional)
+#' @param custom_erythrocyte Custom list of erythrocyte markers (default: predefined list)
+#' @param custom_coagulation Custom list of coagulation markers (default: predefined list)
+#' @param custom_platelet Custom list of platelet markers (default: predefined list)
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{rawdata}{Original expression matrix}
+#'   \item{group}{Sample group information}
+#'   \item{data}{Contamination marker expression matrices (erythrocyte, coagulation, platelet)}
+#'   \item{plot_marker}{Level plots for filtered markers}
+#'   \item{plot_contamination}{Box plots showing marker expression across groups}
+#'   \item{missing_genes}{Markers missing from the dataset}
+#'   \item{correlation}{Correlation matrices for each marker type}
+#'   \item{marker_list}{Filtered markers passing QC criteria}
+#'   \item{marker_stats}{Statistical summary for each marker}
+#' }
+#'
+#' @details
+#' The function performs the following quality control steps:
+#' 1. Checks input validity and loads required packages
+#' 2. Defines contamination marker panels (default or custom)
+#' 3. Transforms data to long format and merges with group information
+#' 4. For each marker panel (erythrocyte, platelet, coagulation):
+#'    a. Generates box plots with statistical tests
+#'    b. Identifies non-DE markers (p > 0.05)
+#'    c. Computes correlation matrix between markers
+#'    d. Filters markers that are non-DE and highly correlated (r > cutoff)
+#' 5. Generates level plots for filtered markers
+#' 6. Compiles comprehensive statistics for each marker
+#'
+#' @note
+#' - When DE_filter = TRUE, data_group must be provided
+#' - Default marker lists include known contamination markers from literature
+#' - Returns NA for analyses with insufficient markers
+#'
+#' @examples
+#' \dontrun{
+#' # Example usage
+#' data_matrix <- matrix(rnorm(1000), nrow = 100, 
+#'                      dimnames = list(paste0("Protein", 1:100),
+#'                                     paste0("Sample", 1:10)))
+#' group_info <- data.frame(id = paste0("Sample", 1:10),
+#'                          group = rep(c("A", "B"), each = 5))
+#' 
+#' result <- data_check(
+#'   data = data_matrix,
+#'   data_group = group_info,
+#'   cutoff = 0.85,
+#'   custom_erythrocyte = c("HBA1", "HBB", "CA1")
+#' )
+#' 
+#' # View erythrocyte contamination plot
+#' print(result$plot_contamination$erythrocyte)
+#' 
+#' # View marker statistics
+#' head(result$marker_stats$stats_erythrocyte)
+#' }
+#'
+#' @importFrom ggplot2 ggplot aes geom_boxplot theme_classic labs theme element_text
+#' @importFrom ggpubr stat_compare_means
+#' @importFrom tidyr gather spread
+#' @importFrom dplyr filter distinct bind_cols select mutate pull arrange group_by
+#' @importFrom stringr str_detect
+#' @importFrom stats cor
+#' @export
 data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
                        group1 = NULL, group2 = NULL,
                        custom_erythrocyte = NULL,
@@ -9,8 +86,6 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
   # cutoff为相关性阈值，默认0.9
   
   # 加载必要的库
-  # library(Hmisc)
-  library(readxl)
   library(ggplot2)
   library(ggpubr)
   library(tidyr)

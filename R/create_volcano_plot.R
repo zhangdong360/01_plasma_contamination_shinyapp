@@ -1,4 +1,60 @@
-
+#' Create Volcano Plot for Differential Expression Analysis
+#'
+#' Generates a customizable volcano plot to visualize differentially expressed proteins/genes 
+#' with intelligent labeling and automatic font scaling.
+#'
+#' @param limma_result Data frame containing limma differential expression results
+#' @param p_type Type of p-value to display: "adjusted" (adj.P.Val) or "raw" (P.Value)
+#' @param p_cutoff Significance cutoff for p-values (default: 0.05)
+#' @param logFC_cutoff Minimum absolute log fold change for significance (default: 1)
+#' @param gene_col Column name containing gene/protein identifiers (default: "Protein")
+#' @param group_names Character vector of comparison group names (c(numerator, denominator))
+#' @param colors Color scheme for expression directions:
+#'   - Up: upregulated (default: "#E64B35")
+#'   - Down: downregulated (default: "#4DBBD5")
+#'   - Not: non-significant (default: "grey80")
+#' @param base_size Base font size (default: 14)
+#' @param label_size Label font size (default: 4.5)
+#' @param auto_font Enable automatic font scaling based on data size (default: TRUE)
+#'
+#' @return A ggplot2 volcano plot object showing:
+#'   - X-axis: log2 fold change
+#'   - Y-axis: -log10(p-value)
+#'   - Points colored by expression direction
+#'   - Labeled top differential proteins
+#'   - Significance threshold lines
+#'
+#' @details
+#' Key features:
+#' 1. Automatically scales fonts based on data size when auto_font=TRUE:
+#'    - Base size: 16 (<5k points), 14 (5-10k), 12 (>10k)
+#'    - Label size: 4.5 (<5k), 4 (5-10k), 3.5 (>10k)
+#' 2. Labels top 10 most significant proteins by absolute logFC
+#' 3. Includes dynamic legend showing counts per category
+#' 4. Uses ggrepel for non-overlapping labels
+#' 5. Shows proper mathematical notation for axes
+#'
+#' @examples
+#' \dontrun{
+#' # Using limma results
+#' volcano <- create_volcano_plot(
+#'   limma_result = deg_results,
+#'   group_names = c("Treatment", "Control"),
+#'   p_cutoff = 0.01,
+#'   logFC_cutoff = 1.5
+#' )
+#' 
+#' # Customize appearance
+#' volcano + 
+#'   theme(legend.position = "bottom") +
+#'   labs(title = "Differential Expression")
+#' }
+#'
+#' @importFrom ggplot2 ggplot aes geom_point theme_classic theme scale_color_manual labs
+#' @importFrom ggplot2 geom_hline geom_vline element_text element_blank
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom dplyr filter arrange desc
+#' @export
 create_volcano_plot <- function(limma_result, 
                                 p_type = "adjusted", 
                                 p_cutoff = 0.05, 
@@ -122,101 +178,4 @@ create_volcano_plot <- function(limma_result,
       )
   }
   return(volc)
-}
-venn_plot <- function(set1, set2, 
-                      categories = c("Set A", "Set B"),
-                      title = "Venn Diagram",
-                      colors = c("#ae6b81", "#6982b9"),
-                      alpha = 0.5,
-                      print.mode = c("raw", "percent"),
-                      save.plot = FALSE,
-                      filename = "venn_diagram.png") {
-  
-  # 强制退出时清理日志的保险机制
-  on.exit({
-    log_files <- list.files(
-      pattern = "^VennDiagram\\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\.[0-9]+\\.log$",
-      ignore.case = TRUE
-    )
-    if (length(log_files) > 0) {
-      suppressWarnings(file.remove(log_files))
-    }
-  })
-  
-  # 检查并加载必要包
-  if (!requireNamespace("VennDiagram", quietly = TRUE)) {
-    install.packages("VennDiagram")
-    library(VennDiagram)
-  }
-  
-  # 处理输入并移除NA
-  if (is.vector(set1) && is.vector(set2)) {
-    set_list <- list(
-      set1 = unique(na.omit(set1)),
-      set2 = unique(na.omit(set2))
-    )
-  } else if (is.list(set1) && length(set1) == 2) {
-    set_list <- lapply(set1, function(s) unique(na.omit(s)))
-  } else {
-    stop("输入应为两个向量或包含两个集合的列表")
-  }
-  
-  # 检查空集合
-  if (any(lengths(set_list) == 0)) {
-    grid::grid.newpage()
-    grid::grid.text("No elements in one or both sets", gp = grid::gpar(fontsize = 16))
-    return(invisible(list(
-      total_unique = length(unique(unlist(set_list))),
-      overlap_count = 0,
-      overlap_elements = character(0)
-    )))
-  }
-  
-  overlap <- intersect(set_list[[1]], set_list[[2]])
-  
-  # 统一使用draw.pairwise.venn并添加scaled参数
-  venn <- tryCatch({
-    VennDiagram::draw.pairwise.venn(
-      area1 = length(set_list[[1]]),
-      area2 = length(set_list[[2]]),
-      cross.area = length(overlap),
-      category = categories,
-      fill = colors,
-      alpha = alpha,
-      lty = "blank",
-      cex = 1.5,
-      cat.cex = 1.3,
-      cat.pos = c(-30, 30),
-      cat.dist = c(0.05, 0.05),
-      margin = 0.05,
-      print.mode = print.mode,
-      ind = FALSE,
-      scaled = TRUE  # 关键参数，允许自动调整比例
-    )
-  }, error = function(e) {
-    message("绘图错误: ", e$message)
-    return(NULL)
-  })
-  
-  if (is.null(venn)) {
-    grid::grid.newpage()
-    grid::grid.text("无法生成韦恩图", gp = grid::gpar(fontsize = 16))
-  } else {
-    grid::grid.newpage()
-    grid::grid.draw(venn)
-    grid::grid.text(title, y = 0.95, gp = grid::gpar(fontsize = 16))
-  }
-  
-  if (save.plot) {
-    ggplot2::ggsave(filename, plot = venn, 
-                    width = 8, height = 6, 
-                    dpi = 300)
-    message("图形已保存为：", filename)
-  }
-  
-  invisible(list(
-    total_unique = length(unique(unlist(set_list))),
-    overlap_count = length(overlap),
-    overlap_elements = overlap
-  ))
 }

@@ -1,3 +1,67 @@
+#' Plot Distribution of Statistical Metrics
+#'
+#' Generates a histogram for the distribution of correlation coefficients or p-values, 
+#' with options to add kernel density curves and significance thresholds.
+#'
+#' @param data Data matrix or data frame with samples as rows and features as columns
+#' @param type Correlation type (currently only "pearson" supported; reserved for future extensions)
+#' @param statistic Type of statistic to plot:
+#'   - "pvalue": P-value distribution histogram (default)
+#'   - "correlation": Correlation coefficient distribution histogram
+#' @param alpha Significance threshold (only effective when statistic = "pvalue"). Default: 0.05
+#' @param title Plot title (auto-generated if NULL)
+#' @param xlab X-axis label (auto-generated if NULL)
+#' @param ylab Y-axis label. Default: "Frequency"
+#' @param binwidth Histogram bin width (default: 0.05 for p-values, 0.1 for correlations)
+#' @param boundary Starting boundary for histogram bins (default: 0 for p-values, -1 for correlations)
+#' @param add_fit Whether to add kernel density curve. Default: TRUE
+#' @param fit_color Color for density curve. Default: "#2E8B57" (forest green)
+#' @param fit_size Line width for density curve. Default: 1.2
+#'
+#' @return A ggplot2 object
+#' 
+#' @details
+#' Function workflow:
+#' 1. Checks for required package installations (ggplot2)
+#' 2. Computes correlation matrix and associated p-values
+#' 3. Selects visualization based on statistic parameter
+#' 4. Constructs histogram with optional elements (density curve/significance threshold)
+#' 
+#' When statistic = "pvalue":
+#'   - Red dashed line indicates significance threshold (alpha)
+#'   - Red bars represent significant p-values (p < alpha)
+#'   - Blue bars represent non-significant p-values
+#' 
+#' When statistic = "correlation":
+#'   - All bars shown in blue
+#'   - Density curve shows distribution of correlation coefficients
+#'
+#' @importFrom ggplot2 ggplot aes geom_histogram scale_fill_manual geom_vline
+#' @importFrom ggplot2 geom_line labs theme_minimal theme element_text
+#' @importFrom ggplot2 after_stat
+#' @importFrom Rfast cora
+#' @importFrom stats pt
+#' 
+#' @examples
+#' \dontrun{
+#' # Example data
+#' set.seed(123)
+#' data_matrix <- matrix(rnorm(1000), nrow = 100, ncol = 10)
+#' 
+#' # Plot p-value distribution
+#' plot_stat_distribution(data_matrix)
+#' 
+#' # Plot correlation distribution with custom parameters
+#' plot_stat_distribution(
+#'   data = data_matrix,
+#'   statistic = "correlation",
+#'   title = "Correlation Coefficient Distribution",
+#'   binwidth = 0.05,
+#'   fit_color = "darkblue"
+#' )
+#' }
+#' 
+#' @export
 plot_stat_distribution <- function(data, type = "pearson", statistic = "pvalue", alpha = 0.05,
                                    title = NULL, xlab = NULL, ylab = "频数",
                                    binwidth = NULL, boundary = NULL,
@@ -6,10 +70,6 @@ plot_stat_distribution <- function(data, type = "pearson", statistic = "pvalue",
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("请先安装ggplot2包: install.packages('ggplot2')")
   }
-  if (!requireNamespace("Hmisc", quietly = TRUE)) {
-    stop("请先安装Hmisc包: install.packages('Hmisc')")
-  }
-  
   # 检查statistic参数有效性
   if (!statistic %in% c("pvalue", "correlation")) {
     stop("参数statistic必须是'pvalue'或'correlation'")
@@ -39,7 +99,6 @@ plot_stat_distribution <- function(data, type = "pearson", statistic = "pvalue",
   diag(p_values) <- NA
   test_result <- list(r = cor_matrix,
                       P = p_values)
-  # test_result <- Hmisc::rcorr(as.matrix(t(data)), type = type)
   if (statistic == "pvalue") {
     # 计算相关矩阵和p值矩阵
     cor_matrix  <- Rfast::cora(as.matrix(t(data)))

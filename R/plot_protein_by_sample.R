@@ -1,3 +1,48 @@
+#' Plot Protein Expression Distribution by Sample
+#'
+#' Creates a boxplot visualization of log2-transformed protein expression values for each sample.
+#' Useful for quality control to identify sample-level expression distribution patterns.
+#'
+#' @param data Expression matrix with proteins as rows and samples as columns
+#'
+#' @return A ggplot object showing:
+#'   - X-axis: Sample IDs
+#'   - Y-axis: log2(expression + 1)
+#'   - Boxes: Distribution of protein expression per sample
+#'   - Color-coded by sample ID
+#'
+#' @details
+#' The function performs the following transformations:
+#' 1. Transposes input matrix (samples → rows, proteins → columns)
+#' 2. Converts to long format suitable for ggplot
+#' 3. Applies log2(value + 1) transformation to handle zeros and normalize variance
+#' 4. Generates boxplots with sample-colored fills
+#'
+#' @note
+#' - The +1 transformation prevents -Inf values from log2(0)
+#' - Boxplots show median, quartiles, and outliers
+#' - Sample IDs are rotated 90° for readability
+#'
+#' @examples
+#' \dontrun{
+#' # Create example data (100 proteins x 6 samples)
+#' expr_matrix <- matrix(rnorm(600), nrow = 100, 
+#'                      dimnames = list(paste0("Protein", 1:100),
+#'                                     paste0("Sample", 1:6)))
+#' 
+#' # Generate plot
+#' p <- plot_protein_by_sample(expr_matrix)
+#' print(p)
+#' 
+#' # Customize plot
+#' p + labs(title = "Protein Expression Distribution") + 
+#'     theme(legend.position = "none")
+#' }
+#'
+#' @importFrom ggplot2 ggplot aes geom_boxplot theme_classic theme element_text labs
+#' @importFrom tidyr gather
+#' @importFrom dplyr %>%
+#' @export
 library(ggplot2)
 library(tidyr)
 library(dplyr)
