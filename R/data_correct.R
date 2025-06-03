@@ -47,13 +47,12 @@ data_correct <- function(data,
     } else {
       rep(NA,dim(data$rawdata)[2])
     }
-    
     components  <- data.frame(
       erythrocyte = list_erythrocyte,
       Platelet = list_platelet,
       coagulation = list_coagulation
     )
-    return(components )
+    return(components)
   }
   
   smpl2 <- mean_2(data)
@@ -65,8 +64,6 @@ data_correct <- function(data,
   rownames(b) <- rownames(rawdata)
   colnames(b) <- colnames(smpl2)
   # 计算约束系数 ----
-  # result_cor <- test_result <- Hmisc::rcorr(as.matrix(t(data$rawdata)), type = "pearson")
-  # result_cor <- as.data.frame(result_cor$r)
   result_cor <- cor(as.matrix(t(data$rawdata)), method = "pearson")
   result_cor <- as.data.frame(result_cor)
   # 初始化约束因子为 NULL

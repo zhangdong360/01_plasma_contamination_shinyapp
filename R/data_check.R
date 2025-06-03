@@ -73,9 +73,8 @@ data_check <- function(data, data_group = NULL, cutoff = 0.9, DE_filter = T,
                     ncol(numeric_data), "protein available)"))
       return(list(r = NA, P = NA, insufficient_proteins = TRUE))
     }
-   
-    corr_results <- Hmisc::rcorr(as.matrix(numeric_data), type = "pearson")
-    return(list(r = corr_results$r, P = corr_results$P, insufficient_proteins = FALSE))
+    corr_results <- cor(as.matrix(numeric_data), method = "pearson")
+    return(list(r = corr_results, P = NULL, insufficient_proteins = FALSE))
   }
   filter_markers <- function(keys_with_high_pvalue, corr_matrix_r) {
     # 检查相关性分析是否成功
