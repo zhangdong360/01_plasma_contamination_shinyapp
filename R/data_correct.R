@@ -119,9 +119,9 @@ data_correct <- function(data,
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
       # 使用预计算的约束因子向量
-      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
-      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
-      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
+      Constraint_factor_eryth <- if (!is.null(result_cor_erythrocyte)) result_cor_erythrocyte[colnames(y)] else 1
+      Constraint_factor_plate <- if (!is.null(result_cor_platelet)) result_cor_platelet[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(result_cor_coagulation)) result_cor_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_plate + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -141,8 +141,8 @@ data_correct <- function(data,
       smpl2 <- smpl2[rownames(y),]
       x_plate <- smpl2$Platelet
       x_coagu <- smpl2$coagulation
-      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
-      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
+      Constraint_factor_plate <- if (!is.null(result_cor_platelet)) result_cor_platelet[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(result_cor_coagulation)) result_cor_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_plate + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -161,8 +161,8 @@ data_correct <- function(data,
       smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_coagu <- smpl2$coagulation
-      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
-      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
+      Constraint_factor_eryth <- if (!is.null(result_cor_erythrocyte)) result_cor_erythrocyte[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(result_cor_coagulation)) result_cor_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -181,8 +181,8 @@ data_correct <- function(data,
       smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
       x_plate <- smpl2$Platelet
-      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
-      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
+      Constraint_factor_eryth <- if (!is.null(result_cor_erythrocyte)) result_cor_erythrocyte[colnames(y)] else 1
+      Constraint_factor_plate <- if (!is.null(result_cor_platelet)) result_cor_platelet[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth + x_plate, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -200,7 +200,7 @@ data_correct <- function(data,
       y <- t(y)
       smpl2 <- smpl2[rownames(y),]
       x_eryth <- smpl2$erythrocyte
-      Constraint_factor_eryth <- if (!is.null(constraint_erythrocyte)) constraint_erythrocyte[colnames(y)] else 1
+      Constraint_factor_eryth <- if (!is.null(result_cor_erythrocyte)) result_cor_erythrocyte[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_eryth, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
@@ -217,7 +217,7 @@ data_correct <- function(data,
       y <- t(y)
       smpl2 <- smpl2[rownames(y),]
       x_plate <- smpl2$Platelet
-      Constraint_factor_plate <- if (!is.null(constraint_platelet)) constraint_platelet[colnames(y)] else 1
+      Constraint_factor_plate <- if (!is.null(result_cor_platelet)) result_cor_platelet[colnames(y)] else 1
       # x_coagu <- smpl2$coagulation
       a <- summary(rlm(log2(y + 1) ~ x_plate, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
@@ -235,7 +235,7 @@ data_correct <- function(data,
       y <- t(y)
       smpl2 <- smpl2[rownames(y),]
       x_coagu <- smpl2$coagulation
-      Constraint_factor_coagu <- if (!is.null(constraint_coagulation)) constraint_coagulation[colnames(y)] else 1
+      Constraint_factor_coagu <- if (!is.null(result_cor_coagulation)) result_cor_coagulation[colnames(y)] else 1
       a <- summary(rlm(log2(y + 1) ~ x_coagu, maxit = 30))
       for (j in 2:nrow(a$coefficients)) {
         b[i, j - 1] = a$coefficients[j, 1]
